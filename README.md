@@ -4,15 +4,15 @@
 
 Клонируйте репозиторий в директорию, в которой находитесь:
 ```bash
-git clone https://gitlab.com/mikey-semy/gidrator-backend.git .
+git clone https://gitlab.com/store-be/gidrator-be.git .
 ```
 Или:
 ```bash
-git clone https://gitlab.com/mikey-semy/gidrator-backend.git
+git clone https://gitlab.com/store-be/gidrator-be.git
 ```
 Перейдите в директорию с проектом:
 ```bash
-cd ./gidrator-backend
+cd ./gidrator-be
 ```
 
 > [!NOTE]
@@ -37,6 +37,10 @@ cp .env.example .env.dev
 - `POSTGRES_PORT` - порт PostgreSQL (по умолчанию 5432)
 - `POSTGRES_DB` - имя базы данных
 
+> [!NOTE]
+> Порт 5432 может быть занят, поэтому его можно изменить на любой другой свободный порт (например, 5433).
+>
+>
 ### Настройки CORS
 - `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["http://localhost:3000","http://localhost:5173"])
 
@@ -76,7 +80,7 @@ ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173"]
 uv run dev
 ```
 
-Или запуск в режиме разработки (с hot-reload)   одной командой:
+Или запуск в режиме разработки (с hot-reload) с инфраструктурой одной командой:
 
 `PowerShell`
 ```bash
@@ -86,20 +90,20 @@ uv run dev
 ## Разработка
 
 ### Процесс разработки такой:
-- Разработка идёт от `dev`
+- Разработка идёт от `development`
 - В dev мерджим фичи
-- Тестим на `dev`
-- Когда всё ок - мерджим `dev` в main
+- Тестим на `development`
+- Когда всё ок - мерджим `development` в main
 
 Если вы хотите внести изменения или улучшения, пожалуйста, следуйте этим шагам:
 
-1. Переключаемся на `dev` и подтягиваем последние изменения с удалённого репозитория:
+1. Переключаемся на `development` и подтягиваем последние изменения с удалённого репозитория:
 ```bash
-git checkout dev
-git pull origin dev
+git checkout development
+git pull origin development
 ```
 
-2. От `dev` создаем свою ветку разработки и сразу на неё переключаемся:
+2. От `development` создаем свою ветку разработки и сразу на неё переключаемся:
 ```bash
 git checkout -b feature/your-name-of-feature
 ```
@@ -114,17 +118,17 @@ git add .
 git commit -m "feat: your-changes"
 ```
 
-5. Перед пушем обновляем ветку от `dev`, то есть
- 1) Переключаемся обратно на dev
+5. Перед пушем обновляем ветку от `development`, то есть
+ 1) Переключаемся обратно на development
  2) Подтягиваем новые изменения
  3) Возвращаемся на свою ветку
- 4) Переносим свои изменения поверх последней версии `dev`
+ 4) Переносим свои изменения поверх последней версии `development`
 
 ```bash
-git checkout dev
-git pull origin dev
+git checkout development
+git pull origin development
 git checkout feature/your-name-of-feature
-git rebase dev
+git rebase development
 ```
 
 6. Отправляем свою ветку в удалённый репозиторий:
@@ -134,29 +138,29 @@ git push origin feature/your-name-of-feature --force-with-lease
 
 7. Создаем Pull Request в dev ветку!
 > 1) Жмём кнопку "New Pull Request"
-> 2) В base выбираем `dev` (КУДА льём)
+> 2) В base выбираем `development` (КУДА льём)
 > 3) В compare выбираем свою ветку feature/your-name-of-feature (ОТКУДА льём)
 > 4) Пишешь нормальное описание что сделали
 > 5) Добавляем ревьюеров
 > 6) Создаёи PR
 
-Либо просто делаем merge в dev ветку из своей feature/your-name-of-feature ветки.
+Либо просто делаем merge в development ветку из своей feature/your-name-of-feature ветки.
 ```bash
-git checkout dev
+git checkout development
 git merge feature/your-name-of-feature
 ```
 
-8. После тестирования на `dev`, создаём PR из `dev` в `main`.
+8. После тестирования на `development`, создаём PR из `development` в `main`.
 > 1) Создаём новый PR
 > 2) В base выбираем main (КУДА льём)
-> 3) В compare выбираем dev (ОТКУДА льём)
+> 3) В compare выбираем development (ОТКУДА льём)
 > 4) Описываем все изменения которые войдут в прод
 > 6) Ждём подтверждения от тимлида
 
-Либо просто делаем merge в main ветку из dev ветки.
+Либо просто делаем merge в main ветку из development ветки.
 ```bash
 git checkout main
-git merge dev
+git merge development
 ```
 
 9. Удаляем свою ветку feature/your-name-of-feature
