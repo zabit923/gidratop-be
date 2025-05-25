@@ -1,93 +1,172 @@
-# gidrator-be
+# Gidrator
 
+## Установка
 
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
+Клонируйте репозиторий в директорию, в которой находитесь:
+```bash
+git clone https://gitlab.com/mikey-semy/gidrator-backend.git .
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/store-be/gidrator-be.git
-git branch -M main
-git push -uf origin main
+Или:
+```bash
+git clone https://gitlab.com/mikey-semy/gidrator-backend.git
+```
+Перейдите в директорию с проектом:
+```bash
+cd ./gidrator-backend
 ```
 
-## Integrate with your tools
+> [!NOTE]
+> Перед тем, как запускать проект, проверьте наличие файла `.env`
 
-- [ ] [Set up project integrations](https://gitlab.com/store-be/gidrator-be/-/settings/integrations)
+## Настройка окружения
 
-## Collaborate with your team
+Перед запуском проекта необходимо настроить переменные окружения.
+В проекте используется файл `.env.dev` для разработки.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+Скопируйте пример конфигурации из .env.example в новый файл .env.dev:
+```bash
+cp .env.example .env.dev
+```
 
-## Test and Deploy
+Отредактируйте файл .env.dev, заполнив следующие обязательные параметры:
 
-Use the built-in continuous integration in GitLab.
+### Настройки базы данных PostgreSQL
+- `POSTGRES_USER` - имя пользователя PostgreSQL
+- `POSTGRES_PASSWORD` - пароль пользователя PostgreSQL
+- `POSTGRES_HOST` - хост базы данных (обычно localhost для разработки)
+- `POSTGRES_PORT` - порт PostgreSQL (по умолчанию 5432)
+- `POSTGRES_DB` - имя базы данных
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Настройки CORS
+- `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["http://localhost:3000","http://localhost:5173"])
 
-***
+### Пример минимальной конфигурации для локальной разработки
+```bash
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=gidrator_db
 
-# Editing this README
+ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+```
+> [!IMPORTANT]
+> Никогда не коммитьте файлы .env.dev или другие файлы с реальными учетными данными в репозиторий!
+>
+> Убедитесь, что они добавлены в .gitignore.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Первый запуск
 
-## Suggestions for a good README
+`PowerShell`
+```bash
+.\scripts\activate.ps1 # .sh для Linux/macOS
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## Последующий запуск
 
-## Name
-Choose a self-explaining name for your project.
+Для активации виртуального окружения без запуска режима разработки:
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+`PowerShell`
+```bash
+.\scripts\setup.ps1 # .sh для Linux/macOS
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+Запуск в режиме разработки (с hot-reload) без инфраструктуры (базы данных и т.д.)
+```bash
+uv run dev
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Или запуск в режиме разработки (с hot-reload)   одной командой:
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+`PowerShell`
+```bash
+.\scripts\activate.ps1 # .sh для Linux/macOS
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Разработка
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Процесс разработки такой:
+- Разработка идёт от `dev`
+- В dev мерджим фичи
+- Тестим на `dev`
+- Когда всё ок - мерджим `dev` в main
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Если вы хотите внести изменения или улучшения, пожалуйста, следуйте этим шагам:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+1. Переключаемся на `dev` и подтягиваем последние изменения с удалённого репозитория:
+```bash
+git checkout dev
+git pull origin dev
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+2. От `dev` создаем свою ветку разработки и сразу на неё переключаемся:
+```bash
+git checkout -b feature/your-name-of-feature
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+3. Кодим и по итогу добавляем все изменения в индекс:
+```bash
+git add .
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+4. Создаём коммит с описанием изменений
+```bash
+git commit -m "feat: your-changes"
+```
 
-## License
-For open source projects, say how it is licensed.
+5. Перед пушем обновляем ветку от `dev`, то есть
+ 1) Переключаемся обратно на dev
+ 2) Подтягиваем новые изменения
+ 3) Возвращаемся на свою ветку
+ 4) Переносим свои изменения поверх последней версии `dev`
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```bash
+git checkout dev
+git pull origin dev
+git checkout feature/your-name-of-feature
+git rebase dev
+```
+
+6. Отправляем свою ветку в удалённый репозиторий:
+```bash
+git push origin feature/your-name-of-feature --force-with-lease
+```
+
+7. Создаем Pull Request в dev ветку!
+> 1) Жмём кнопку "New Pull Request"
+> 2) В base выбираем `dev` (КУДА льём)
+> 3) В compare выбираем свою ветку feature/your-name-of-feature (ОТКУДА льём)
+> 4) Пишешь нормальное описание что сделали
+> 5) Добавляем ревьюеров
+> 6) Создаёи PR
+
+Либо просто делаем merge в dev ветку из своей feature/your-name-of-feature ветки.
+```bash
+git checkout dev
+git merge feature/your-name-of-feature
+```
+
+8. После тестирования на `dev`, создаём PR из `dev` в `main`.
+> 1) Создаём новый PR
+> 2) В base выбираем main (КУДА льём)
+> 3) В compare выбираем dev (ОТКУДА льём)
+> 4) Описываем все изменения которые войдут в прод
+> 6) Ждём подтверждения от тимлида
+
+Либо просто делаем merge в main ветку из dev ветки.
+```bash
+git checkout main
+git merge dev
+```
+
+9. Удаляем свою ветку feature/your-name-of-feature
+
+Локально:
+
+```bash
+git branch -d feature/your-name-of-feature
+```
+Удалённо:
+```bash
+git push origin --delete feature/your-name-of-feature
+```
