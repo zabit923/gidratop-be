@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import Optional
 import time
 import socket
+import platform
 import uvicorn
+
 
 class DockerDaemonNotRunningError(Exception):
     """
@@ -92,8 +94,6 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
     if not os.path.exists(compose_path):
         print(f"❌ Файл {compose_file} не найден в директории {ROOT_DIR}")
         raise FileNotFoundError(f"❌ Файл {compose_file} не найден в {ROOT_DIR}")
-    else:
-        print(f"✅ Найден файл {compose_file}")
 
     # Проверяем наличие .env.dev
     env_path = os.path.join(ROOT_DIR, ENV_FILE)
@@ -151,6 +151,15 @@ def get_available_port(default_port: int) -> int:
         except OSError:
             port += 1
     raise RuntimeError(f"Не могу найти свободный порт после {default_port}")
+
+def is_port_free(port: int) -> bool:
+    """Проверяет свободен ли порт"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', port))
+            return True
+    except OSError:
+        return False
 
 def get_port(service: str) -> int:
     """Получает порт из переменных окружения или использует значение по умолчанию"""
@@ -303,6 +312,23 @@ def create_database():
 
 def start_infrastructure():
     print("🚀 Запускаем инфраструктуру...")
+
+    env_vars = load_env_vars()
+
+    busy_ports = []
+    for service, default_port in DEFAULT_PORTS.items():
+        # Получаем порт из .env.dev или используем дефолтный
+        port = int(env_vars.get(f"{service}_PORT", default_port))
+        if not is_port_free(port):
+            busy_ports.append(f"{service}: {port}")
+
+    if busy_ports:
+        print("❌ Следующие порты заняты:")
+        for port_info in busy_ports:
+            print(f"   - {port_info}")
+        print("💡 Останови процессы на этих портах или измени порты в .env.dev")
+        return False
+
     try:
         # Проверяем статус Docker
         try:
@@ -414,6 +440,21 @@ def start_infrastructure():
         print(f"❌ Ошибка при запуске инфраструктуры: {e}")
         return False
 
+def setup():
+    """Настройка окружения"""
+    system = platform.system()
+    if system == "Windows":
+        subprocess.run(["powershell", "-File", "scripts/setup.ps1"], check=True)
+    else:
+        subprocess.run(["bash", "scripts/setup.sh"], check=True)
+
+def activate():
+    """Активация окружения и запуск dev режима"""
+    system = platform.system()
+    if system == "Windows":
+        subprocess.run(["powershell", "-File", "scripts/activate.ps1"], check=True)
+    else:
+        subprocess.run(["bash", "scripts/activate.sh"], check=True)
 
 def dev(port: Optional[int] = None):
     """
