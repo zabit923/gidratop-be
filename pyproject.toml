@@ -1,19 +1,19 @@
 [project]
-name = "gidrator-backend"
-version = "0.1.0"
+dependencies = [
+  "alembic>=1.16.1",
+  "asyncpg>=0.30.0",
+  "fastapi>=0.115.12",
+  "greenlet>=3.2.2",
+  "pydantic-settings>=2.9.1",
+  "pytz>=2025.2",
+  "sqlalchemy>=2.0.41",
+  "uvicorn>=0.34.2",
+]
 description = "Add your description here"
+name = "gidrator-backend"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "alembic>=1.16.1",
-    "asyncpg>=0.30.0",
-    "fastapi>=0.115.12",
-    "greenlet>=3.2.2",
-    "pydantic-settings>=2.9.1",
-    "pytz>=2025.2",
-    "sqlalchemy>=2.0.41",
-    "uvicorn>=0.34.2",
-]
+version = "0.1.0"
 
 [project.optional-dependencies]
 dev = [
@@ -29,6 +29,7 @@ dev = [
 packages = ["app", "scripts"]
 
 [project.scripts]
+activate = "scripts.commands:activate"
 check = "scripts.commands:check"
 dev = "scripts.commands:dev"
 format = "scripts.commands:format"
@@ -36,9 +37,9 @@ lint = "scripts.commands:lint"
 migrate = "scripts.commands:migrate"
 prod = "scripts.commands:prod"
 serve = "scripts.commands:serve"
+setup = "scripts.commands:setup"
 start = "scripts.commands:start_all"
 test = "scripts.commands:test"
-
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"

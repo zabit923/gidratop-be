@@ -61,18 +61,17 @@ ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173"]
 
 ## Первый запуск
 
-`PowerShell`
 ```bash
-.\scripts\activate.ps1 # .sh для Linux/macOS
+uv run activate
 ```
 
 ## Последующий запуск
 
-Для активации виртуального окружения без запуска режима разработки:
+Для активации виртуального окружения без запуска режима разработки
+(например, нужно сделать миграции в соседнем терминале при запущенной инфраструктуре):
 
-`PowerShell`
 ```bash
-.\scripts\setup.ps1 # .sh для Linux/macOS
+uv run setup
 ```
 
 Запуск в режиме разработки (с hot-reload) без инфраструктуры (базы данных и т.д.)
@@ -82,16 +81,15 @@ uv run dev
 
 Или запуск в режиме разработки (с hot-reload) с инфраструктурой одной командой:
 
-`PowerShell`
 ```bash
-.\scripts\activate.ps1 # .sh для Linux/macOS
+uv run activate
 ```
 
 ## Разработка
 
 ### Процесс разработки такой:
 - Разработка идёт от `development`
-- В dev мерджим фичи
+- В `development` мерджим фичи
 - Тестим на `development`
 - Когда всё ок - мерджим `development` в main
 
