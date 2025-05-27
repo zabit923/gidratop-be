@@ -1,9 +1,10 @@
 from app.routes.base import BaseRouter
+from app.routes.v1.registration import RegisterRouter
 
 
 class APIv1(BaseRouter):
     def configure_routes(self):
-        # self.router.include_router(RegisterRouter().get_router())
+        self.router.include_router(RegisterRouter().get_router())
         # self.router.include_router(VerificationRouter().get_router())
         # self.router.include_router(AuthRouter().get_router())
         # self.router.include_router(OAuthRouter().get_router())
