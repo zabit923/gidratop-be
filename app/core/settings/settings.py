@@ -5,7 +5,7 @@ from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from app.core.lifespan import lifespan
+from app.core.lifespan import lifespan
 from app.core.settings.logging import LoggingSettings
 from app.core.settings.paths import PathSettings
 
@@ -28,9 +28,7 @@ class Settings(BaseSettings):
 
     # Настройки приложения
     TITLE: str = "Gidrator"
-    DESCRIPTION: str = (
-        ""
-    )
+    DESCRIPTION: str = ""
     VERSION: str = "0.1.0"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
@@ -49,7 +47,7 @@ class Settings(BaseSettings):
             "version": self.VERSION,
             "swagger_ui_parameters": {"defaultModelsExpandDepth": -1},
             "root_path": "",
-            # "lifespan": lifespan,
+            "lifespan": lifespan,
         }
 
     @property

@@ -12,9 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import setup_logging
-
 from app.core.middlewares.logging import LoggingMiddleware
-
 from app.core.settings import settings
 from app.routes.main import MainRouter
 from app.routes.v1 import APIv1
@@ -29,7 +27,7 @@ def create_application() -> FastAPI:
     setup_logging()
 
     app.add_middleware(LoggingMiddleware)
- 
+
     app.add_middleware(CORSMiddleware, **settings.cors_params)
 
     app.include_router(MainRouter().get_router())

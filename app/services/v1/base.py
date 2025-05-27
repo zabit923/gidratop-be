@@ -831,7 +831,6 @@ class BaseEntityManager(BaseDataManager[T]):
                     model = transform_func(model)
                 items.append(schema_to_use.model_validate(model))
 
-
         except SQLAlchemyError as e:
             self.logger.error("Ошибка при получении пагинированных записей: %s", e)
 
