@@ -8,7 +8,7 @@
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Type, TypeVar, Union, Set
+from typing import Any, Dict, List, Set, Type, TypeVar, Union
 
 from sqlalchemy import DateTime, MetaData
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column

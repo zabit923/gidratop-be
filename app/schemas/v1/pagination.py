@@ -1,4 +1,4 @@
-from typing import (Dict, Generic, List, Type, TypeVar)
+from typing import Dict, Generic, List, Type, TypeVar
 
 from pydantic import BaseModel
 
@@ -150,6 +150,7 @@ class SortFields(BaseSortFields):
     """
 
     pass
+
 
 # class UserSortFields(BaseSortFields):
 #     """
