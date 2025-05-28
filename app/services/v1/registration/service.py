@@ -8,7 +8,9 @@
 Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
-
+import uuid
+import secrets
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions.users import UserCreationError, UserExistsError
@@ -206,6 +208,7 @@ class RegisterService(BaseService):
             is_verified=False,
             # Генерируем реферальный код (можно добавить логику генерации)
             referral_code="0",  # TODO: реализовать позже #self._generate_referral_code(user.username)
+            #! Из-за этого регистрация не будет работать для следующего зарегистрирвоанного
         )
 
         try:
@@ -224,3 +227,15 @@ class RegisterService(BaseService):
             raise UserCreationError(
                 "Не удалось создать пользователя. Пожалуйста, попробуйте позже."
             ) from e
+
+    def _generate_referral_code(self) -> str:
+        """
+        Генерирует уникальный реферальный код
+
+        Использует случайную строку из 8 символов для простоты.
+        Можно заменить на более сложную логику генерации, если потребуется.
+
+        Returns:
+            str: Уникальный реферальный код
+        """
+        return secrets.token_urlsafe(8)  # Или uuid.uuid4().hex[:8]

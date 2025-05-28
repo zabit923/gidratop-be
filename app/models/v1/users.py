@@ -116,15 +116,7 @@ class UserModel(BaseModel):
     registration_source: Mapped[str] = mapped_column(nullable=True)
 
     # Связи
-    referred_by: Mapped["UserModel"] = relationship(
-        "UserModel",
-        remote_side="UserModel.id",  # Указываем полное имя
-        back_populates="referrals"
-    )
-    referrals: Mapped[list["UserModel"]] = relationship(
-        "UserModel",
-        back_populates="referred_by"
-    )
+    referred_by: Mapped["UserModel"] = relationship("UserModel", remote_side="UserModel.id")
     addresses: Mapped[list["UserAddress"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

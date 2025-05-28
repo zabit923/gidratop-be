@@ -3,7 +3,7 @@ from .auth import (AuthenticationError, InvalidCredentialsError,
                    InvalidPasswordError, TokenError, TokenExpiredError,
                    TokenInvalidError, TokenMissingError, WeakPasswordError)
 from .base import BaseAPIException
-
+from .users import ForbiddenError, UserNotFoundError
 __all__ = [
     "BaseAPIException",
     "AuthenticationError",
@@ -16,4 +16,6 @@ __all__ = [
     "TokenMissingError",
     "TokenExpiredError",
     "TokenInvalidError",
+    "ForbiddenError",
+    "UserNotFoundError",
 ]
