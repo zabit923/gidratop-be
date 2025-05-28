@@ -10,4 +10,3 @@ class APIv1(BaseRouter):
         # self.router.include_router(OAuthRouter().get_router())
         # self.router.include_router(UserRouter().get_router())
         # self.router.include_router(ProfileRouter().get_router())
-        pass

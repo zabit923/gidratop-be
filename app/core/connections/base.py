@@ -43,7 +43,6 @@ class BaseClient(ABC):
         Raises:
             NotImplementedError: Когда метод не реализован в подклассе
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
@@ -55,7 +54,6 @@ class BaseClient(ABC):
         Raises:
             NotImplementedError: Когда метод не реализован в подклассе
         """
-        pass
 
 
 class BaseContextManager(ABC):
@@ -88,7 +86,6 @@ class BaseContextManager(ABC):
         Raises:
             NotImplementedError: Когда метод не реализован в подклассе
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
@@ -100,7 +97,6 @@ class BaseContextManager(ABC):
         Raises:
             NotImplementedError: Когда метод не реализован в подклассе
         """
-        pass
 
     async def __aenter__(self):
         """

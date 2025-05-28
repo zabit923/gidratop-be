@@ -10,6 +10,7 @@ from app.models.v1.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.v1.addresses import UserAddress
+    from app.models.v1.carts import Cart
     from app.models.v1.payments import PaymentMethod
 
 
@@ -119,11 +120,10 @@ class UserModel(BaseModel):
     referred_by: Mapped["UserModel"] = relationship(
         "UserModel",
         remote_side="UserModel.id",  # Указываем полное имя
-        back_populates="referrals"
+        back_populates="referrals",
     )
     referrals: Mapped[list["UserModel"]] = relationship(
-        "UserModel",
-        back_populates="referred_by"
+        "UserModel", back_populates="referred_by"
     )
     addresses: Mapped[list["UserAddress"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -131,7 +131,7 @@ class UserModel(BaseModel):
     payment_methods: Mapped[list["PaymentMethod"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    # cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
+    cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
     # orders: Mapped[list["Order"]] = relationship(back_populates="user")
     # reviews: Mapped[list["ProductReview"]] = relationship(back_populates="user")
     # wishlist: Mapped[list["WishlistItem"]] = relationship(back_populates="user")

@@ -68,8 +68,6 @@ class BaseRequestSchema(CommonBaseSchema):
     Так как нету необходимости для ввода исходных данных id и даты создания и обновления.
     """
 
-    pass
-
 
 class BaseCommonResponseSchema(CommonBaseSchema):
     """
@@ -78,8 +76,6 @@ class BaseCommonResponseSchema(CommonBaseSchema):
     Этот класс наследуется от `CommonBaseSchema` и предоставляет общую
     конфигурацию для всех схем ответов.
     """
-
-    pass
 
 
 class BaseResponseSchema(CommonBaseSchema):
