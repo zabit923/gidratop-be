@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from app.models.v1.products import Product
 
 
-class MainCategory(BaseModel):
+class Category(BaseModel):
     """
     Модель категории товаров.
     Содержит информацию о названии и описании категории.
@@ -17,39 +17,25 @@ class MainCategory(BaseModel):
     Attributes:
         title: Название категории.
         description: Описание категории.
+        parent_id: ID родительской категории (если есть).
+        parent: Родительская категория (если есть).
+        children: Список дочерних категорий.
+        products: Список продуктов, относящихся к данной категории.
     """
 
-    __tablename__ = "main_categories"
+    __tablename__ = "categories"
 
     title: Mapped[str] = mapped_column(nullable=False, unique=True)
     description: Mapped[str] = mapped_column(nullable=True)
+    parent_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=True)
 
-    sub_category: Mapped[List["SubCategory"]] = relationship(
-        "SubCategory", back_populates="main_category"
+    parent: Mapped["Category"] = relationship(
+        "Category", remote_side=[id], back_populates="children", lazy="selectin"
     )
-
-
-class SubCategory(BaseModel):
-    """
-    Модель подкатегории товаров.
-    Содержит информацию о названии, описании и родительской категории.
-
-    Attributes:
-        title: Название подкатегории.
-        description: Описание подкатегории.
-        main_category_id: ID родительской категории.
-    """
-
-    __tablename__ = "sub_categories"
-
-    title: Mapped[str] = mapped_column(nullable=False)
-    description: Mapped[str] = mapped_column(nullable=True)
-    main_category_id: Mapped[int] = mapped_column(
-        ForeignKey("main_categories.id", ondelete="CASCADE")
-    )
-
-    main_category: Mapped["MainCategory"] = relationship(
-        "MainCategory", back_populates="sub_categories"
+    children: Mapped[list["Category"]] = relationship(
+        "Category",
+        back_populates="parent",
+        lazy="selectin",
     )
     products: Mapped[List["Product"]] = relationship(
         "Product", back_populates="category"

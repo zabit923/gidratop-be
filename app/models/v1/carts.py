@@ -46,10 +46,16 @@ class CartItem(BaseModel):
     quantity: Mapped[int] = mapped_column(nullable=False, default=1)
 
     cart: Mapped["Cart"] = relationship(
-        "CartModel", foreign_keys=[cart_id], back_populates="items"
+        "CartModel",
+        foreign_keys=[cart_id],
+        back_populates="items",
+        lazy="selectin",
     )
     product: Mapped["Product"] = relationship(
-        "ProductModel", foreign_keys=[product_id], back_populates="items"
+        "ProductModel",
+        foreign_keys=[product_id],
+        back_populates="items",
+        lazy="selectin",
     )
 
     __table_args__ = (

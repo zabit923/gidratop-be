@@ -1,14 +1,30 @@
-from .v1.base import (BaseCommonResponseSchema, BaseRequestSchema,
-                      BaseResponseSchema, BaseSchema, CommonBaseSchema,
-                      ErrorResponseSchema, ItemResponseSchema,
-                      ListResponseSchema)
+from .v1.base import (
+    BaseCommonResponseSchema,
+    BaseRequestSchema,
+    BaseResponseSchema,
+    BaseSchema,
+    CommonBaseSchema,
+    ErrorResponseSchema,
+    ItemResponseSchema,
+    ListResponseSchema,
+)
+from .v1.categories.base import CategoryDataSchema
 from .v1.pagination import Page, PaginationParams
-from .v1.registration import (RegistrationDataSchema,
-                              RegistrationRequestSchema,
-                              RegistrationResponseSchema)
-from .v1.users import (CurrentUserSchema, UserDetailDataSchema,
-                       UserPrivateSchema, UserProfileSchema, UserPublicSchema,
-                       UserSchema, UserStatusDataSchema)
+from .v1.products.base import ProductDataSchema
+from .v1.registration import (
+    RegistrationDataSchema,
+    RegistrationRequestSchema,
+    RegistrationResponseSchema,
+)
+from .v1.users import (
+    CurrentUserSchema,
+    UserDetailDataSchema,
+    UserPrivateSchema,
+    UserProfileSchema,
+    UserPublicSchema,
+    UserSchema,
+    UserStatusDataSchema,
+)
 
 __all__ = [
     "BaseSchema",
@@ -31,4 +47,6 @@ __all__ = [
     "RegistrationDataSchema",
     "RegistrationResponseSchema",
     "RegistrationRequestSchema",
+    "CategoryDataSchema",
+    "ProductDataSchema",
 ]
