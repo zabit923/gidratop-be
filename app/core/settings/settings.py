@@ -75,6 +75,33 @@ class Settings(BaseSettings):
     TOKEN_SECRET_KEY: SecretStr
     USER_INACTIVE_TIMEOUT: int = 900  # 15 минут
 
+    # Настройки Redis
+    REDIS_USER: str = "default"
+    REDIS_PASSWORD: SecretStr
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_POOL_SIZE: int = 10
+
+    @property
+    def redis_dsn(self) -> RedisDsn:
+        return RedisDsn.build(
+            scheme="redis",
+            username=self.REDIS_USER,
+            password=self.REDIS_PASSWORD.get_secret_value(),
+            host=self.REDIS_HOST,
+            port=self.REDIS_PORT,
+            path=f"/{self.REDIS_DB}",
+        )
+
+    @property
+    def redis_url(self) -> str:
+        return str(self.redis_dsn)
+
+    @property
+    def redis_params(self) -> Dict[str, Any]:
+        return {"url": self.redis_url, "max_connections": self.REDIS_POOL_SIZE}
+
     # Настройки базы данных
     POSTGRES_USER: str
     POSTGRES_PASSWORD: SecretStr
@@ -121,6 +148,56 @@ class Settings(BaseSettings):
             "expire_on_commit": False,
             "class_": AsyncSession,
         }
+
+    # Настройки RabbitMQ
+    RABBITMQ_CONNECTION_TIMEOUT: int = 30
+    RABBITMQ_EXCHANGE: str = "gidrator"
+    RABBITMQ_USER: str
+    RABBITMQ_PASS: SecretStr
+    RABBITMQ_HOST: str = "localhost"
+    RABBITMQ_PORT: int = 5672
+
+    @property
+    def rabbitmq_dsn(self) -> AmqpDsn:
+        return AmqpDsn.build(
+            scheme="amqp",
+            username=self.RABBITMQ_USER,
+            password=self.RABBITMQ_PASS.get_secret_value(),
+            host=self.RABBITMQ_HOST,
+            port=self.RABBITMQ_PORT,
+        )
+
+    @property
+    def rabbitmq_url(self) -> str:
+        """
+        Для pika нужно строку с подключением к RabbitMQ
+        """
+        return str(self.rabbitmq_dsn)
+
+    @property
+    def rabbitmq_params(self) -> Dict[str, Any]:
+        """
+        Формирует параметры подключения к RabbitMQ.
+
+        Returns:
+            Dict с параметрами подключения к RabbitMQ
+        """
+        return {
+            "url": self.rabbitmq_url,
+            "connection_timeout": self.RABBITMQ_CONNECTION_TIMEOUT,
+            "exchange": self.RABBITMQ_EXCHANGE,
+        }
+
+    # Настройки почты
+    VERIFICATION_URL: str = "https://api.gidrator.ru/api/v1/register/verify-email/"
+    PASSWORD_RESET_URL: str = "https://api.gidrator.ru/api/v1/auth/reset-password/"
+    # PASSWORD_RESET_URL: str = "https://gidrator.ru/reset-password?token="
+    LOGIN_URL: str = "https://api.gidrator.ru/api/v1/auth"
+    SMTP_SERVER: str = "smtp.gidrator.ru"
+    SMTP_PORT: int = 587
+    SENDER_EMAIL: str = "noreply@gidrator.ru"
+    SMTP_USERNAME: str = "admin"
+    SMTP_PASSWORD: SecretStr
 
     # Настройки CORS
     ALLOW_ORIGINS: List[str] = []
