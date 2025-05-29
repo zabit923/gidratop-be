@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import ForeignKey, Numeric
+from sqlalchemy import JSON, ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import BaseModel
@@ -34,7 +34,7 @@ class Product(BaseModel):
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[Optional[str]] = mapped_column(nullable=True)
     category_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("sub_categories.id", ondelete="SET NULL"), nullable=True
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     brand: Mapped[Optional[str]] = mapped_column(nullable=True)
     country: Mapped[Optional[str]] = mapped_column(nullable=True)
@@ -47,10 +47,10 @@ class Product(BaseModel):
     material: Mapped[Optional[str]] = mapped_column(nullable=True, doc="Материал")
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     quantity: Mapped[int] = mapped_column(nullable=False, default=0)
-    images: Mapped[Optional[List[str]]] = mapped_column(nullable=True)
+    images: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)
 
     category: Mapped[Optional["Category"]] = relationship(
-        "SubCategory", back_populates="products", lazy="selectin"
+        "Category", back_populates="products", lazy="selectin"
     )
     items: Mapped[Optional["CartItem"]] = relationship(
         "CartItem", back_populates="product"
