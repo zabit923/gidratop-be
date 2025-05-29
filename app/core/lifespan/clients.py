@@ -26,14 +26,14 @@ class ClientsManager(BaseClient):
         for client in self.clients:
             await client.connect()
 
-        self.logger.info("Подключено %s клиентов", len(self.clients))
+        self.logger.info("Подключено клиентов: %s", len(self.clients))
 
     async def close(self) -> None:
         """Закрывает все клиенты"""
         for client in self.clients:
             await client.close()
 
-        self.logger.info("Закрыто %s клиентов", len(self.clients))
+        self.logger.info("Закрыто клиентов: %s", len(self.clients))
 
 
 # Создаем единственный экземпляр менеджера клиентов
@@ -52,6 +52,3 @@ async def close_clients(app: FastAPI):
     """Закрытие клиентов при остановке приложения"""
     # Закрываем клиентов
     await app.state.clients_manager.close()
-
-    # Закрываем DI контейнер
-    await app.state.dishka_container.close()

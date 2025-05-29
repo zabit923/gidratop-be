@@ -15,11 +15,12 @@ Routes:
 Classes:
     AuthRouter: Класс для настройки маршрутов аутентификации
 """
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from redis import Redis
 from app.core.connections.database import get_db_session
+from app.core.connections.cache import get_redis_client
 from app.routes.base import BaseRouter
 from app.schemas import (
     TokenResponseSchema,
@@ -95,7 +96,8 @@ class AuthRouter(BaseRouter):
         )
         async def authenticate(
             form_data: OAuth2PasswordRequestForm = Depends(),
-            session: AsyncSession = Depends(get_db_session)
+            session: AsyncSession = Depends(get_db_session),
+            redis: Redis = Depends(get_redis_client)
         ) -> TokenResponseSchema:
             """
             ## 🔐 Аутентификация пользователя
@@ -117,17 +119,13 @@ class AuthRouter(BaseRouter):
             * **token_type**: Тип токена (Bearer)
             * **expires_in**: Время жизни access токена в секундах
             """
-            return await AuthService(session).authenticate(form_data)
+            return await AuthService(session, redis).authenticate(form_data)
 
         @self.router.post(
             path="/refresh",
             response_model=TokenResponseSchema,
-            deprecated=True,
-            summary="🚧 В разработке",
-            description="**Эндпойнт находится в разработке и недоступен**",
-            tags=["🚧 В разработке"],
-            # summary="Обновление токена доступа",
-            # description="Получение нового access токена с помощью refresh токена",
+            summary="Обновление токена доступа",
+            description="Получение нового access токена с помощью refresh токена",
             responses={
                 200: {
                     "model": TokenResponseSchema,
@@ -157,7 +155,8 @@ class AuthRouter(BaseRouter):
                 description="Refresh токен для получения нового access токена",
                 example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
             ),
-            session: AsyncSession = Depends(get_db_session)
+            session: AsyncSession = Depends(get_db_session),
+            redis: Redis = Depends(get_redis_client)
         ) -> TokenResponseSchema:
             """
             ## 🔄 Обновление токена доступа
@@ -179,18 +178,13 @@ class AuthRouter(BaseRouter):
             * При каждом обновлении выдается новый refresh токен
             * Старый refresh токен становится недействительным
             """
-            raise HTTPException(status_code=501, detail="Не реализовано")
-            # return await AuthService(session).refresh_token(refresh_token)
+            return await AuthService(session, redis).refresh_token(refresh_token)
 
         @self.router.post(
             path="/logout",
             response_model=LogoutResponseSchema,
-            deprecated=True,
-            summary="🚧 В разработке",
-            description="**Эндпойнт находится в разработке и недоступен**",
-            tags=["🚧 В разработке"],
-            # summary="Выход из системы",
-            # description="Завершение сессии пользователя и аннулирование токенов",
+            summary="Выход из системы",
+            description="Завершение сессии пользователя и аннулирование токенов",
             responses={
                 200: {
                     "model": LogoutResponseSchema,
@@ -207,12 +201,13 @@ class AuthRouter(BaseRouter):
             }
         )
         async def logout(
-            access_token: str = Header(
-                ...,
-                description="Access токен для завершения сессии",
+            authorization: str = Header(
+                None,
+                description="Заголовок Authorization с токеном Bearer",
                 example="Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
             ),
-            session: AsyncSession = Depends(get_db_session)
+            session: AsyncSession = Depends(get_db_session),
+            redis: Redis = Depends(get_redis_client)
         ) -> LogoutResponseSchema:
             """
             ## 🚪 Выход из системы
@@ -221,7 +216,7 @@ class AuthRouter(BaseRouter):
             После выхода все токены пользователя становятся недействительными.
 
             ### Заголовки:
-            * **access_token**: Bearer токен для идентификации сессии
+            * **authorization**: Bearer токен для идентификации сессии
 
             ### Returns:
             * **message**: Сообщение о успешном выходе
@@ -232,18 +227,13 @@ class AuthRouter(BaseRouter):
             * Все активные сессии пользователя завершаются
             * Требуется повторная аутентификация для доступа
             """
-            raise HTTPException(status_code=501, detail="Не реализовано")
-            # return await AuthService(session).logout(access_token)
+            return await AuthService(session, redis).logout(authorization)
 
         @self.router.post(
             path="/forgot-password",
             response_model=PasswordResetResponseSchema,
-            deprecated=True,
-            summary="🚧 В разработке",
-            description="**Эндпойнт находится в разработке и недоступен**",
-            tags=["🚧 В разработке"],
-            # summary="Запрос восстановления пароля",
-            # description="Отправка ссылки для сброса пароля на email",
+            summary="Запрос восстановления пароля",
+            description="Отправка ссылки для сброса пароля на email",
             responses={
                 200: {
                     "model": PasswordResetResponseSchema,
@@ -260,7 +250,8 @@ class AuthRouter(BaseRouter):
         )
         async def forgot_password(
             forgot_data: ForgotPasswordSchema,
-            session: AsyncSession = Depends(get_db_session)
+            session: AsyncSession = Depends(get_db_session),
+            redis: Redis = Depends(get_redis_client)
         ) -> PasswordResetResponseSchema:
             """
             ## 📧 Запрос восстановления пароля
@@ -281,18 +272,14 @@ class AuthRouter(BaseRouter):
             * Ссылки имеют ограниченный срок действия
             * Одноразовые токены для сброса пароля
             """
-            # return await AuthService(session).forgot_password(forgot_data)
-            raise HTTPException(status_code=501, detail="Не реализовано")
+            return await AuthService(session, redis).send_password_reset_email(forgot_data)
+
 
         @self.router.post(
             path="/reset-password",
             response_model=PasswordResetConfirmResponseSchema,
-            deprecated=True,
-            summary="🚧 В разработке",
-            description="**Эндпойнт находится в разработке и недоступен**",
-            tags=["🚧 В разработке"],
-            # summary="Подтверждение сброса пароля",
-            # description="Установка нового пароля по токену восстановления",
+            summary="Подтверждение сброса пароля",
+            description="Установка нового пароля по токену восстановления",
             responses={
                 200: {
                     "model": PasswordResetConfirmResponseSchema,
@@ -314,7 +301,8 @@ class AuthRouter(BaseRouter):
         )
         async def reset_password(
             reset_data: PasswordResetConfirmSchema,
-            session: AsyncSession = Depends(get_db_session)
+            session: AsyncSession = Depends(get_db_session),
+            redis: Redis = Depends(get_redis_client)
         ) -> PasswordResetConfirmResponseSchema:
             """
             ## 🔑 Подтверждение сброса пароля
@@ -343,5 +331,4 @@ class AuthRouter(BaseRouter):
             * Все предыдущие сессии пользователя завершаются
             * Токен становится недействительным после использования
             """
-            raise HTTPException(status_code=501, detail="Не реализовано")
-            # return await AuthService(session).reset_password(reset_data)
+            return await AuthService(session, redis).reset_password(reset_data)

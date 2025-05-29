@@ -6,7 +6,7 @@ from typing import Optional
 from redis import Redis
 
 from app.core.exceptions import ForbiddenError, TokenInvalidError
-from app.core.security import TokenManager
+from app.core.security.token import TokenManager
 from app.core.settings import settings
 from app.schemas import UserCredentialsSchema
 

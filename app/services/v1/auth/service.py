@@ -3,10 +3,13 @@
 
 Обеспечивает аутентификацию, создание токенов и управление сессиями.
 """
+from typing import Optional
 from datetime import datetime, timezone
 from fastapi.security import OAuth2PasswordRequestForm
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.core.integrations.cache.auth import AuthRedisDataManager
+from app.core.integrations.mail import AuthEmailDataManager
 from app.core.exceptions import (
     ForbiddenError,
     InvalidCredentialsError,
@@ -22,7 +25,8 @@ from app.schemas.v1.auth import (
     TokenResponseSchema,
     LogoutResponseSchema,
     PasswordResetResponseSchema,
-    PasswordResetConfirmResponseSchema
+    PasswordResetConfirmResponseSchema,
+    PasswordResetConfirmSchema
 )
 from app.schemas.v1.users import UserCredentialsSchema
 from app.services.v1.base import BaseService
@@ -44,7 +48,7 @@ class AuthService(BaseService):
         data_manager: Менеджер данных для аутентификации
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, redis: Redis):
         """
         Инициализирует сервис аутентификации.
 
@@ -53,6 +57,8 @@ class AuthService(BaseService):
         """
         super().__init__(session)
         self.data_manager = AuthDataManager(session)
+        self.redis_data_manager = AuthRedisDataManager(redis)
+        self.email_data_manager = AuthEmailDataManager()
 
     async def authenticate(
         self, form_data: OAuth2PasswordRequestForm
@@ -137,6 +143,16 @@ class AuthService(BaseService):
             },
         )
 
+        await self.redis_data_manager.set_online_status(user_schema.id, True)
+        self.logger.info(
+            "Пользователь вошел в систему",
+            extra={
+                "user_id": user_schema.id,
+                "email": user_schema.email,
+                "is_online": True,
+            },
+        )
+
         await self.data_manager.update_items(
             user_schema.id,
             {"last_login": datetime.now(timezone.utc)}
@@ -175,10 +191,9 @@ class AuthService(BaseService):
             extra={"access_token_length": len(access_token)}
         )
 
-        # TODO: Сохранить токен в Redis когда будет готов
-
+        await self.redis_data_manager.save_token(user_schema, access_token)
         self.logger.info(
-            "Токен создан",
+            "Токен создан и сохранен в Redis",
             extra={
                 "user_id": user_schema.id,
                 "access_token_length": len(access_token)
@@ -211,14 +226,10 @@ class AuthService(BaseService):
             extra={"refresh_token_length": len(refresh_token)}
         )
 
-        # TODO: Сохранить refresh токен в Redis когда будет готов
-
+        await self.redis_data_manager.save_refresh_token(user_id, refresh_token)
         self.logger.info(
-            "Refresh токен создан",
-            extra={
-                "user_id": user_id,
-                "refresh_token_length": len(refresh_token)
-            },
+            "Refresh токен создан и сохранен в Redis",
+            extra={"user_id": user_id, "refresh_token_length": len(refresh_token)},
         )
 
         return refresh_token
@@ -245,7 +256,13 @@ class AuthService(BaseService):
             # Валидируем refresh токен
             user_id = TokenManager.validate_refresh_token(payload)
 
-            # TODO: Проверить refresh токен в Redis когда будет готов
+            # Проверяем, что refresh токен существует в Redis
+            if not await self.redis_data_manager.check_refresh_token(user_id, refresh_token):
+                self.logger.warning(
+                    "Попытка использовать неизвестный refresh токен",
+                    extra={"user_id": user_id},
+                )
+                raise TokenInvalidError()
 
             # Получаем пользователя
             user_model = await self.data_manager.get_model_by_field("id", user_id)
@@ -263,7 +280,8 @@ class AuthService(BaseService):
             access_token = await self.create_token(user_schema)
             new_refresh_token = await self.create_refresh_token(user_id)
 
-            # TODO: Удалить старый refresh токен из Redis
+            # Удаляем старый refresh токен
+            await self.redis_data_manager.remove_refresh_token(user_id, refresh_token)
 
             self.logger.info(
                 "Токены успешно обновлены",
@@ -283,7 +301,7 @@ class AuthService(BaseService):
             )
             raise
 
-    async def logout(self, access_token: str) -> LogoutResponseSchema:
+    async def logout(self, authorization: Optional[str]) -> LogoutResponseSchema:
         """
         Выполняет выход пользователя из системы.
 
@@ -294,78 +312,183 @@ class AuthService(BaseService):
             LogoutResponseSchema: Подтверждение выхода
         """
         try:
-            # Декодируем токен для получения user_id
-            payload = TokenManager.decode_token(access_token)
-            user_id = payload.get("sub")
+            # Извлекаем токен из заголовка
+            token = TokenManager.get_token_from_header(authorization)
 
-            # TODO: Удалить токены из Redis когда будет готов
-            # TODO: Установить статус offline в Redis
+            try:
+                # Получаем данные из токена
+                payload = TokenManager.decode_token(token)
 
-            self.logger.info(
-                "Пользователь вышел из системы",
-                extra={"user_id": user_id}
+                # Получаем user_id пользователя
+                user_id = payload.get("user_id")
+
+                if user_id:
+                    await self.redis_data_manager.set_online_status(user_id, False)
+
+                    # Удаляем все refresh токены пользователя
+                    await self.redis_data_manager.remove_all_refresh_tokens(user_id)
+
+                    self.logger.debug(
+                        "Пользователь вышел из системы, все токены удалены",
+                        extra={"user_id": user_id, "is_online": False},
+                    )
+
+                    # Последнюю активность сохраняем в момент выхода
+                    await self.redis_data_manager.update_last_activity(token)
+
+            except (TokenExpiredError, TokenInvalidError) as e:
+                # Логируем проблему с токеном, но продолжаем процесс выхода
+                self.logger.warning(
+                    "Выход с невалидным токеном: %s",
+                    type(e).__name__,
+                    extra={"token_error": type(e).__name__},
+                )
+
+            # Удаляем токен из Redis
+            await self.redis_data_manager.remove_token(token)
+            return LogoutResponseSchema()
+
+        except (TokenExpiredError, TokenInvalidError) as e:
+            # Для этих ошибок мы не можем продолжить процесс выхода
+            self.logger.warning(
+                "Ошибка при выходе: %s",
+                type(e).__name__,
+                extra={"error_type": type(e).__name__},
+            )
+            # Пробрасываем исключение дальше для обработки на уровне API
+            raise
+
+    async def send_password_reset_email(
+        self, email: str
+    ) -> PasswordResetResponseSchema:
+        """
+        Отправляет email со ссылкой для сброса пароля
+
+        Args:
+            email: Email пользователя
+
+        Returns:
+            PasswordResetResponseSchema: Сообщение об успехе
+
+        Raises:
+            UserNotFoundError: Если пользователь с указанным email не найден
+        """
+        self.logger.info("Запрос на сброс пароля", extra={"email": email})
+
+        # Проверяем существование пользователя
+        user = await self.data_manager.get_user_by_identifier(email)
+        if not user:
+            self.logger.warning("Пользователь не найден", extra={"email": email})
+            # Не сообщаем об отсутствии пользователя в ответе из соображений безопасности
+            return PasswordResetResponseSchema(
+                success=True,
+                message="Инструкции по сбросу пароля отправлены на ваш email",
             )
 
-            return LogoutResponseSchema(
-                message="Выход выполнен успешно"
+        # Генерируем токен для сброса пароля
+        reset_token = self._generate_password_reset_token(user.id)
+
+        try:
+            await self.email_data_manager.send_password_reset_email(
+                to_email=user.email, user_name=user.username, reset_token=reset_token
+            )
+
+            self.logger.info(
+                "Письмо для сброса пароля отправлено",
+                extra={"user_id": user.id, "email": user.email},
+            )
+
+            return PasswordResetResponseSchema(
+                success=True,
+                message="Инструкции по сбросу пароля отправлены на ваш email",
             )
 
         except Exception as e:
             self.logger.error(
-                "Ошибка при выходе из системы",
-                extra={"error": str(e)}
+                "Ошибка при отправке письма сброса пароля: %s",
+                e,
+                extra={"email": email},
             )
-            # Даже если произошла ошибка, считаем выход успешным
-            return LogoutResponseSchema(
-                message="Выход выполнен"
-            )
-
-    # Заглушки для восстановления пароля
-    async def send_password_reset_email(self, email: str) -> PasswordResetResponseSchema:
-        """
-        Отправляет email со ссылкой для сброса пароля.
-
-        ЗАГЛУШКА: Пока что только логирует запрос.
-
-        Args:
-            email: Email адрес пользователя
-
-        Returns:
-            PasswordResetResponseSchema: Подтверждение отправки
-        """
-        self.logger.info(
-            "Запрос восстановления пароля (заглушка)",
-            extra={"email": email}
-        )
-
-        # TODO: Реализовать отправку email
-
-        return PasswordResetResponseSchema(
-            message="Если аккаунт с таким email существует, письмо будет отправлено"
-        )
+            raise
 
     async def reset_password(
-        self, token: str, new_password: str
+        self, reset_data: PasswordResetConfirmSchema
     ) -> PasswordResetConfirmResponseSchema:
         """
-        Устанавливает новый пароль по токену сброса.
-
-        ЗАГЛУШКА: Пока что только логирует запрос.
+        Устанавливает новый пароль по токену сброса
 
         Args:
             token: Токен сброса пароля
             new_password: Новый пароль
 
         Returns:
-            PasswordResetConfirmResponseSchema: Подтверждение сброса
+            PasswordResetConfirmResponseSchema: Сообщение об успехе
+
+        Raises:
+            TokenInvalidError: Если токен недействителен
+            TokenExpiredError: Если токен истек
+            UserNotFoundError: Если пользователь не найден
         """
-        self.logger.info(
-            "Сброс пароля (заглушка)",
-            extra={"token_length": len(token)}
-        )
+        self.logger.info("Запрос на установку нового пароля")
 
-        # TODO: Реализовать сброс пароля
+        try:
+            # Проверяем и декодируем токен
+            payload = TokenManager.verify_token(reset_data.token)
 
-        return PasswordResetConfirmResponseSchema(
-            message="Пароль успешно изменен"
-        )
+            # Проверяем тип токена
+            if payload.get("type") != "password_reset":
+                self.logger.warning(
+                    "Неверный тип токена", extra={"type": payload.get("type")}
+                )
+                raise TokenInvalidError()
+
+            # Получаем ID пользователя
+            user_id = int(payload["sub"])
+
+            # Проверяем существование пользователя
+            user = await self.data_manager.get_item_by_field("id", user_id)
+            if not user:
+                self.logger.warning(
+                    "Пользователь не найден", extra={"user_id": user_id}
+                )
+                raise UserNotFoundError(field="id", value=user_id)
+
+            # Хешируем новый пароль
+            hashed_password = PasswordHasher.hash_password(reset_data.new_password)
+
+            # Обновляем пароль в БД
+            await self.data_manager.update_items(
+                user_id, {"hashed_password": hashed_password}
+            )
+
+            self.logger.info("Пароль успешно изменен", extra={"user_id": user_id})
+            return PasswordResetConfirmResponseSchema(
+                success=True, message="Пароль успешно изменен"
+            )
+
+        except (TokenExpiredError, TokenInvalidError) as e:
+            self.logger.error("Ошибка проверки токена сброса пароля: %s", e)
+            raise
+        except Exception as e:
+            self.logger.error("Ошибка при сбросе пароля: %s", e)
+            raise
+
+    def _generate_password_reset_token(self, user_id: int) -> str:
+        """
+        Генерирует токен для сброса пароля
+
+        Args:
+            user_id: ID пользователя
+
+        Returns:
+            str: Токен для сброса пароля
+        """
+        payload = {
+            "sub": str(user_id),
+            "type": "password_reset",
+            "expires_at": (
+                int(datetime.now(timezone.utc).timestamp())
+                + 1800  # 30 минут (в секундах)
+            ),
+        }
+        return TokenManager.generate_token(payload)

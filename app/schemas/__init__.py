@@ -24,7 +24,8 @@ from .v1.auth import (
     UserInactiveResponseSchema,
     WeakPasswordResponseSchema
 )
-
+from .v1.mail import (EmailMessageSchema, PasswordResetEmailSchema,
+                      RegistrationSuccessEmailSchema, VerificationEmailSchema)
 __all__ = [
     # Errors
     "RateLimitErrorSchema",
@@ -66,5 +67,10 @@ __all__ = [
     "TokenInvalidResponseSchema",
     "TokenMissingResponseSchema",
     "UserInactiveResponseSchema",
-    "WeakPasswordResponseSchema"
+    "WeakPasswordResponseSchema",
+    # Mail
+    "EmailMessageSchema",
+    "PasswordResetEmailSchema",
+    "RegistrationSuccessEmailSchema",
+    "VerificationEmailSchema"
 ]

@@ -11,7 +11,7 @@ Redis используется в приложении как универсал
 Модуль использует настройки подключения из конфигурации приложения и реализует
 базовые интерфейсы из модуля base.py.
 """
-
+from typing import AsyncGenerator
 from redis import Redis, from_url
 
 from app.core.settings import Config, settings
@@ -114,3 +114,30 @@ class RedisContextManager(BaseContextManager):
         Делегирует закрытие подключения экземпляру RedisClient.
         """
         await self.redis_client.close()
+
+
+# Глобальный экземпляр клиента
+redis_client = RedisClient()
+
+
+async def get_redis_client() -> AsyncGenerator[Redis, None]:
+    """
+    Dependency для получения Redis клиента в FastAPI.
+
+    Yields:
+        Redis: Экземпляр Redis клиента
+
+    Usage:
+        ```python
+        @router.post("/auth/")
+        async def authenticate(
+            redis: Redis = Depends(get_redis_client)
+        ):
+            # Работа с Redis
+        ```
+    """
+    client = await redis_client.connect()
+    try:
+        yield client
+    finally:
+        await redis_client.close()
