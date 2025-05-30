@@ -59,7 +59,7 @@ class AuthRouter(BaseRouter):
         """
         Инициализирует роутер аутентификации.
         """
-        super().__init__(prefix="auth", tags=["Authentication"])
+        super().__init__(prefix="auth", tags=["Аутентификация"])
 
     def configure(self):
         """

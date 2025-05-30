@@ -144,8 +144,6 @@ class RegisterService(BaseService):
             message="Email успешно подтвержден. Теперь вы можете войти в систему.",
         )
 
-
-
     async def resend_verification_email(self, email: str) -> dict:
         """
         Повторно отправляет письмо верификации.
@@ -176,6 +174,26 @@ class RegisterService(BaseService):
         return ResendVerificationResponseSchema(
             message="Письмо с токеном верификации отправлено повторно"
         )
+
+    async def check_verification_status(self, email: str) -> bool:
+        """
+        Проверяет статус верификации email пользователя
+
+        Args:
+            email: Email пользователя
+
+        Returns:
+            bool: True если email подтвержден, иначе False
+
+        Raises:
+            UserNotFoundError: Если пользователь с указанным email не найден
+        """
+        user = await self.data_manager.get_item_by_field("email", email)
+        if not user:
+            self.logger.error("Пользователь с email '%s' не найден", email)
+            raise UserNotFoundError(field="email", value=email)
+
+        return user.is_verified
 
     def _validate_verification_token(self, token: str) -> int:
         """

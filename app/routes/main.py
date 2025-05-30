@@ -9,7 +9,7 @@ class MainRouter(BaseRouter):
     """
 
     def __init__(self):
-        super().__init__(prefix="", tags=["Main"])
+        super().__init__(prefix="", tags=["Главная"])
 
     def configure(self):
         @self.router.get("/")

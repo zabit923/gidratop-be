@@ -15,13 +15,16 @@ from .v1.pagination import Page, PaginationParams
 from .v1.registration import (RegistrationDataSchema,
                               RegistrationRequestSchema,
                               RegistrationResponseSchema,
+                              ResendVerificationRequestSchema,
                               ResendVerificationResponseSchema,
                               VerificationResponseSchema,
-                              VerificationStatusResponseSchema)
+                              VerificationStatusResponseSchema,
+                              UserCreationResponseSchema,
+                              UserExistsResponseSchema)
 from .v1.users import (CurrentUserSchema, UserCredentialsSchema,
                        UserDetailDataSchema, UserPrivateSchema,
                        UserProfileSchema, UserPublicSchema, UserSchema,
-                       UserStatusDataSchema)
+                       UserStatusDataSchema, UserNotFoundResponseSchema)
 
 __all__ = [
     # Errors
@@ -48,13 +51,17 @@ __all__ = [
     "UserDetailDataSchema",
     "UserStatusDataSchema",
     "UserCredentialsSchema",
+    "UserNotFoundResponseSchema",
     # Registration
     "RegistrationDataSchema",
     "RegistrationResponseSchema",
     "RegistrationRequestSchema",
+    "ResendVerificationRequestSchema",
     "VerificationResponseSchema",
     "ResendVerificationResponseSchema",
     "VerificationStatusResponseSchema",
+    "UserCreationResponseSchema",
+    "UserExistsResponseSchema",
     # Auth
     "ForgotPasswordSchema",
     "PasswordResetConfirmSchema",
