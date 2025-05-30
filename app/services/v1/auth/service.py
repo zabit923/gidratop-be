@@ -369,7 +369,7 @@ class AuthService(BaseService):
             )
 
         # Генерируем токен для сброса пароля
-        reset_token = self._generate_password_reset_token(user.id)
+        reset_token = TokenManager.generate_password_reset_token(user.id)
 
         try:
             await self.email_data_manager.send_password_reset_email(
@@ -447,15 +447,3 @@ class AuthService(BaseService):
         except Exception as e:
             self.logger.error("Ошибка при сбросе пароля: %s", e)
             raise
-
-    def _generate_password_reset_token(self, user_id: int) -> str:
-        """
-        Генерирует токен для сброса пароля
-
-        Args:
-            user_id: ID пользователя
-
-        Returns:
-            str: Токен для сброса пароля
-        """
-        return TokenManager.generate_password_reset_token(user_id)

@@ -3,20 +3,17 @@
 
 Обеспечивает доступ к данным пользователей для операций аутентификации.
 """
+from typing import  Optional
 
-import re
-from datetime import datetime, timezone
-from typing import List, Optional
-
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import UserModel
 from app.schemas import UserCredentialsSchema
-from app.services.v1.base import BaseEntityManager
+from app.services.v1.users.data_manager import UserDataManager
 
 
-class AuthDataManager(BaseEntityManager[UserCredentialsSchema]):
+class AuthDataManager(UserDataManager):
     """
     Класс для работы с данными пользователей в базе данных.
 
@@ -28,7 +25,8 @@ class AuthDataManager(BaseEntityManager[UserCredentialsSchema]):
     """
 
     def __init__(self, session: AsyncSession):
-        super().__init__(session=session, schema=UserCredentialsSchema, model=UserModel)
+        super().__init__(session)
+        self.schema = UserCredentialsSchema
 
     async def get_user_by_identifier(self, identifier: str) -> Optional[UserModel]:
         """

@@ -8,18 +8,14 @@ Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
 
-import secrets
-from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import (TokenExpiredError, TokenInvalidError,
-                                 UserCreationError,
-                                 UserNotFoundError)
+from app.core.exceptions import UserNotFoundError
 from app.core.integrations.mail import AuthEmailDataManager
-from app.core.security.password import PasswordHasher
+
 from app.core.security.token import TokenManager
-from app.models import UserModel, UserRole
+from app.models import UserModel
 from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
                          RegistrationResponseSchema,
                          VerificationResponseSchema,
@@ -118,7 +114,8 @@ class RegisterService(BaseService):
 
 
         # Декодируем и валидируем токен
-        user_id = await self._validate_verification_token(token)
+        payload = TokenManager.verify_token(token)
+        user_id = TokenManager.validate_verification_token(payload)
 
         # Получаем пользователя
         user = await self.data_manager.get_item_by_field("id", user_id)

@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import UserExistsError, UserCreationError
 from app.core.security.password import PasswordHasher
 from app.models import UserModel, UserRole
-from app.schemas import UserSchema, RegistrationRequestSchema
-from app.services.v1.base import BaseEntityManager
+from app.schemas import RegistrationRequestSchema
+from app.services.v1.users.data_manager import UserDataManager
 
 
-class RegisterDataManager(BaseEntityManager[UserSchema]):
+class RegisterDataManager(UserDataManager):
     """
     Менеджер данных для регистрации пользователей.
 
@@ -25,7 +25,7 @@ class RegisterDataManager(BaseEntityManager[UserSchema]):
     """
 
     def __init__(self, session: AsyncSession):
-        super().__init__(session=session, schema=UserSchema, model=UserModel)
+        super().__init__(session)
 
     async def validate_user_uniqueness(self, username: str, email: str, phone: Optional[str] = None) -> None:
         """
@@ -94,25 +94,6 @@ class RegisterDataManager(BaseEntityManager[UserSchema]):
         except Exception as e:
             self.logger.error("Ошибка создания пользователя в БД: %s", e, exc_info=True)
             raise UserCreationError("Не удалось создать пользователя") from e
-
-    async def get_user_by_identifier(self, identifier: str) -> Optional[UserModel]:
-        """
-        Находит пользователя по email, username или телефону.
-
-        Args:
-            identifier: Email, username или телефон
-
-        Returns:
-            UserModel | None: Найденная модель или None
-        """
-        statement = select(UserModel).where(
-            or_(
-                UserModel.email == identifier,
-                UserModel.username == identifier,
-                UserModel.phone == identifier
-            )
-        )
-        return await self.get_one(statement)
 
     def _generate_referral_code(self) -> str:
         """
