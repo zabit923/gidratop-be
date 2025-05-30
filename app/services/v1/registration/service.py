@@ -1,23 +1,29 @@
 """
-Сервис для регистрации пользователей.
+Сервис регистрации пользователей.
 
-Модуль содержит бизнес-логику для регистрации новых пользователей,
-включая валидацию данных, проверку уникальности и создание аккаунтов.
-Поддерживает как обычную регистрацию, так и OAuth провайдеров.
+Обеспечивает полный цикл регистрации: валидацию, создание пользователя,
+отправку письма верификации и подтверждение email.
 
 Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
-import uuid
+
 import secrets
-from sqlalchemy import event
+from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions.users import UserCreationError, UserExistsError
+from app.core.exceptions import (TokenExpiredError, TokenInvalidError,
+                                 UserCreationError,
+                                 UserNotFoundError)
+from app.core.integrations.mail import AuthEmailDataManager
 from app.core.security.password import PasswordHasher
+from app.core.security.token import TokenManager
 from app.models import UserModel, UserRole
 from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
-                         RegistrationResponseSchema)
+                         RegistrationResponseSchema,
+                         VerificationResponseSchema,
+                         ResendVerificationResponseSchema)
 from app.services.v1.base import BaseService
 
 from .data_manager import RegisterDataManager
@@ -25,33 +31,18 @@ from .data_manager import RegisterDataManager
 
 class RegisterService(BaseService):
     """
-    Сервис для регистрации пользователей.
+    Сервис для регистрации и верификации пользователей.
 
-    Предоставляет методы для создания новых пользователей с полной валидацией
-    данных, проверкой уникальности и безопасным хешированием паролей.
-    Поддерживает как стандартную регистрацию, так и OAuth провайдеров (в перспективе).
+    Основные операции:
+    1. Регистрация нового пользователя
+    2. Отправка письма верификации
+    3. Подтверждение email по токену
+    4. Повторная отправка письма верификации
 
     Attributes:
-        session (AsyncSession): Асинхронная сессия для работы с базой данных
-        data_manager (RegisterDataManager): Менеджер данных для операций с пользователями
-
-    Methods:
-        create_user: Создание нового пользователя через веб-форму
-        _create_user_internal: Внутренний метод создания пользователя
-        _validate_user_uniqueness: Проверка уникальности данных пользователя
-
-    Example:
-        ```python
-        async with get_db_session() as session:
-            service = RegisterService(session)
-            user_data = RegistrationRequestSchema(
-                username="john_doe",
-                email="john@example.com",
-                phone="+7 (999) 123-45-67",
-                password="SecurePass123!"
-            )
-            result = await service.create_user(user_data)
-        ```
+        session: Асинхронная сессия базы данных
+        data_manager: Менеджер данных для операций с пользователями
+        email_data_manager: Менеджер для отправки email
     """
 
     def __init__(self, session: AsyncSession):
@@ -63,179 +54,219 @@ class RegisterService(BaseService):
         """
         super().__init__(session)
         self.data_manager = RegisterDataManager(session)
+        self.email_data_manager = AuthEmailDataManager()
 
     async def create_user(
-        self, new_user: RegistrationRequestSchema
+        self, user_data: RegistrationRequestSchema
     ) -> RegistrationResponseSchema:
         """
-        Создает нового пользователя через веб-форму регистрации.
+        Создает нового пользователя и отправляет письмо верификации.
 
-        Выполняет полный цикл регистрации пользователя: валидацию данных,
-        проверку уникальности, создание записи в базе данных и формирование ответа.
+        Полный процесс:
+        1. Валидация уникальности данных
+        2. Создание пользователя в БД
+        3. Генерация токена верификации
+        4. Отправка письма верификации
 
         Args:
-            new_user (RegistrationRequestSchema): Данные пользователя из формы регистрации
+            user_data: Данные для регистрации пользователя
 
         Returns:
-            RegistrationResponseSchema: Схема ответа с данными созданного пользователя
+            RegistrationResponseSchema: Данные созданного пользователя
 
         Raises:
             UserExistsError: Если пользователь с такими данными уже существует
-            UserCreationError: При ошибке создания пользователя в базе данных
-
-        Example:
-            ```python
-            registration_data = RegistrationRequestSchema(
-                username="john_doe",
-                email="john@example.com",
-                phone="+7 (999) 123-45-67",
-                password="SecurePass123!"
-            )
-            response = await service.create_user(registration_data)
-            # response.data.user_id = 123
-            # response.data.email = "john@example.com"
-            ```
+            UserCreationError: При ошибке создания в БД
         """
 
-        self.logger.info("Начало регистрации пользователя: %s", new_user.username)
+        self.logger.info("Начало регистрации пользователя: %s", user_data.username)
+
+        # Валидируем уникальность данных
+        await self.data_manager.validate_user_uniqueness(
+            username=user_data.username,
+            email=user_data.email,
+            phone=user_data.phone
+        )
 
         # Создаем пользователя через внутренний метод
-        created_user = await self._create_user_internal(new_user)
+        created_user = await self.data_manager.create_user_from_registration(user_data)
+
+        # Отправляем письмо верификации
+        await self._send_verification_email(created_user)
 
         # Формируем данные ответа
-        registration_data = RegistrationDataSchema(
-            user_id=created_user.id,
-            username=created_user.username,
-            email=created_user.email,
-            role=created_user.role.value,
-            is_active=created_user.is_active,
-            is_verified=created_user.is_verified,
-            created_at=created_user.created_at,
-            referral_code=created_user.referral_code,
-        )
+        response_data = self._build_registration_response(created_user)
 
         self.logger.info("Пользователь успешно зарегистрирован: ID=%s", created_user.id)
 
         return RegistrationResponseSchema(
-            message="Регистрация успешно завершена", item=registration_data
+            message="Регистрация успешно завершена",
+            item=response_data
         )
 
-    async def _validate_user_uniqueness(self, user: RegistrationRequestSchema) -> None:
+    async def verify_email(self, token: str) -> VerificationResponseSchema:
         """
-        Проверяет уникальность данных пользователя.
-
-        Проверяет, что пользователь с указанными username, email или телефоном
-        еще не зарегистрирован в системе.
+        Подтверждает email пользователя по токену.
 
         Args:
-            user (RegistrationSchema): Данные пользователя для проверки
-
-        Raises:
-            UserExistsError: Если найден пользователь с такими же данными
-
-        Note:
-            Проверка телефона выполняется только если он указан в данных.
-        """
-        # Проверка username
-        existing_user = await self.data_manager.get_item_by_field(
-            "username", user.username
-        )
-        if existing_user:
-            self.logger.warning(
-                "Попытка регистрации с существующим username: %s", user.username
-            )
-            raise UserExistsError("username", user.username)
-
-        # Проверка email
-        existing_user = await self.data_manager.get_item_by_field("email", user.email)
-        if existing_user:
-            self.logger.warning(
-                "Попытка регистрации с существующим email: %s", user.email
-            )
-            raise UserExistsError("email", user.email)
-
-        # Проверка телефона (если указан)
-        if user.phone:
-            existing_user = await self.data_manager.get_item_by_field(
-                "phone", user.phone
-            )
-            if existing_user:
-                self.logger.warning(
-                    "Попытка регистрации с существующим телефоном: %s", user.phone
-                )
-                raise UserExistsError("phone", user.phone)
-
-    async def _create_user_internal(self, user: RegistrationRequestSchema) -> UserModel:
-        """
-        Внутренний метод создания пользователя в базе данных.
-
-        Выполняет низкоуровневые операции по созданию пользователя:
-        проверку уникальности, хеширование пароля и сохранение в БД.
-
-        Args:
-            user (RegistrationSchema): Данные нового пользователя
+            token: Токен верификации
 
         Returns:
-            UserModel: Созданная модель пользователя из базы данных
+            VerificationResponseSchema: Результат верификации
+        """
+        self.logger.info("Попытка верификации email по токену")
+
+
+        # Декодируем и валидируем токен
+        user_id = await self._validate_verification_token(token)
+
+        # Получаем пользователя
+        user = await self.data_manager.get_item_by_field("id", user_id)
+        if not user:
+            self.logger.warning("Пользователь не найден", extra={"user_id": user_id})
+            raise UserNotFoundError(field="id", value=user_id)
+
+        # Проверяем, не верифицирован ли уже
+        if user.is_verified:
+            return VerificationResponseSchema(
+                user_id=user_id,
+                success=True,
+                message="Email уже был подтвержден ранее.",
+            )
+
+        # Подтверждаем email
+        await self.data_manager.update_items(user_id, {"is_verified": True})
+
+        # Отправляем письмо об успешной регистрации
+        await self._send_registration_success_email(user)
+
+        self.logger.info("Email успешно подтвержден", extra={"user_id": user_id})
+
+        return VerificationResponseSchema(
+            user_id=user_id,
+            message="Email успешно подтвержден. Теперь вы можете войти в систему.",
+        )
+
+
+
+    async def resend_verification_email(self, email: str) -> dict:
+        """
+        Повторно отправляет письмо верификации.
+
+        Args:
+            email: Email пользователя
+
+        Returns:
+            dict: Статус операции
 
         Raises:
-            UserExistsError: Если пользователь с таким email, username или телефоном уже существует
-            UserCreationError: При ошибке создания пользователя в базе данных
-
-        Note:
-            - Поддерживает данные как из веб-формы, так и от OAuth провайдеров
-            - Проверяет уникальность email, username и телефона
-            - Автоматически хеширует пароль перед сохранением
-            - Генерирует реферальный код для нового пользователя
+            UserNotFoundError: Если пользователь не найден
         """
-        self.logger.debug(
-            "Создание пользователя с данными: username=%s, email=%s",
-            user.username,
-            user.email,
-        )
+        # Поиск пользователя по email
+        user_model = await self.data_manager.get_user_by_identifier(email)
+        if not user_model:
+            raise UserNotFoundError(field="email", value=email)
 
-        # Проверяем уникальность данных пользователя
-        await self._validate_user_uniqueness(user)
-
-        # Создаем модель пользователя
-        user_model = UserModel(
-            username=user.username,
-            email=user.email,
-            phone=user.phone,
-            hashed_password=PasswordHasher.hash_password(user.password),
-            role=UserRole.USER,
-            is_active=True,
-            is_verified=False,
-            # Генерируем реферальный код (можно добавить логику генерации)
-            referral_code="0",  # TODO: реализовать позже #self._generate_referral_code(user.username)
-            #! Из-за этого регистрация не будет работать для следующего зарегистрирвоанного
-        )
-
-        try:
-            # Сохраняем пользователя в базе данных
-            created_user = await self.data_manager.add_one(user_model)
-
-            self.logger.info(
-                "Пользователь создан в базе данных: ID=%s", created_user.id
+        # Проверка статуса
+        if user_model.is_verified:
+            return ResendVerificationResponseSchema(
+                message="Email уже подтвержден"
             )
-            return created_user
 
+        # Отправка письма
+        await self._send_verification_email(user_model)
+
+        return ResendVerificationResponseSchema(
+            message="Письмо с токеном верификации отправлено повторно"
+        )
+
+    def _validate_verification_token(self, token: str) -> int:
+        """
+        Валидирует токен верификации и возвращает user_id.
+
+        Args:
+            token: Токен для проверки
+
+        Returns:
+            int: ID пользователя
+
+        Raises:
+            TokenInvalidError: Если токен недействителен
+            TokenExpiredError: Если токен истек
+        """
+        try:
+            payload = TokenManager.verify_token(token)
+            return TokenManager.validate_verification_token(payload)
+        except Exception as e:
+            self.logger.error("Ошибка валидации токена верификации: %s", e)
+            raise
+
+    async def _send_verification_email(self, user: UserModel) -> None:
+        """
+        Отправляет письмо с токеном верификации пользователю.
+
+        Args:
+            user: Модель пользователя, которому отправляется письмо
+        """
+        try:
+            verification_token = TokenManager.generate_verification_token(user.id)
+            await self.email_data_manager.send_verification_email(
+                to_email=user.email,
+                user_name=user.username,
+                verification_token=verification_token,
+            )
+            self.logger.info(
+                "Письмо верификации отправлено",
+                extra={"user_id": user.id, "email": user.email}
+            )
+        except Exception as e:
+            # Не прерываем регистрацию, если письмо не отправилось
+            self.logger.error(
+            "Ошибка при отправке письма верификации: %s",
+            e,
+            extra={"user_id": user.id, "email": user.email}
+        )
+
+    async def _send_registration_success_email(self, user_schema) -> None:
+        """
+        Отправляет письмо об успешной регистрации.
+
+        Args:
+            user_schema: Схема пользователя
+        """
+        try:
+            await self.email_data_manager.send_registration_success_email(
+                to_email=user_schema.email,
+                user_name=user_schema.username
+            )
+            self.logger.info(
+                "Письмо об успешной регистрации отправлено",
+                extra={"user_id": user_schema.id, "email": user_schema.email}
+            )
         except Exception as e:
             self.logger.error(
-                "Ошибка при создании пользователя в БД: %s", e, exc_info=True
+                "Ошибка отправки письма об успешной регистрации: %s",
+                e,
+                extra={"user_id": user_schema.id, "email": user_schema.email}
             )
-            raise UserCreationError(
-                "Не удалось создать пользователя. Пожалуйста, попробуйте позже."
-            ) from e
 
-    def _generate_referral_code(self) -> str:
+    def _build_registration_response(self, user_model: UserModel) -> RegistrationDataSchema:
         """
-        Генерирует уникальный реферальный код
+        Формирует данные ответа регистрации.
 
-        Использует случайную строку из 8 символов для простоты.
-        Можно заменить на более сложную логику генерации, если потребуется.
+        Args:
+            user_model: Модель пользователя
 
         Returns:
-            str: Уникальный реферальный код
+            RegistrationDataSchema: Данные ответа регистрации
         """
-        return secrets.token_urlsafe(8)  # Или uuid.uuid4().hex[:8]
+        return RegistrationDataSchema(
+            user_id=user_model.id,
+            username=user_model.username,
+            email=user_model.email,
+            role=user_model.role.value,
+            is_active=user_model.is_active,
+            is_verified=user_model.is_verified,
+            created_at=user_model.created_at,
+            referral_code=user_model.referral_code,
+        )

@@ -3,9 +3,11 @@
 
 Содержит Pydantic схемы для исходящих данных endpoints аутентификации.
 """
-from typing import Optional
-from pydantic import EmailStr, Field
+
 from datetime import datetime
+from typing import Optional
+
+from pydantic import EmailStr, Field
 
 from app.schemas.v1.base import BaseResponseSchema
 
@@ -50,7 +52,9 @@ class PasswordResetResponseSchema(BaseResponseSchema):
     """
 
     email: EmailStr = Field(description="Email адрес для восстановления пароля")
-    expires_in: int = Field(default=3600, description="Время действия токена в секундах")
+    expires_in: int = Field(
+        default=3600, description="Время действия токена в секундах"
+    )
     message: str = "Ссылка для восстановления пароля отправлена на email"
 
 

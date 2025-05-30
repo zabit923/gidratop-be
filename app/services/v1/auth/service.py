@@ -3,33 +3,29 @@
 
 Обеспечивает аутентификацию, создание токенов и управление сессиями.
 """
-from typing import Optional
+
 from datetime import datetime, timezone
+from typing import Optional
+
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import (ForbiddenError, InvalidCredentialsError,
+                                 TokenExpiredError, TokenInvalidError,
+                                 UserNotFoundError)
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.integrations.mail import AuthEmailDataManager
-from app.core.exceptions import (
-    ForbiddenError,
-    InvalidCredentialsError,
-    TokenExpiredError,
-    TokenInvalidError,
-    UserNotFoundError
-)
 from app.core.security.password import PasswordHasher
 from app.core.security.token import TokenManager
-
-from app.schemas.v1.auth import (
-    AuthSchema,
-    TokenResponseSchema,
-    LogoutResponseSchema,
-    PasswordResetResponseSchema,
-    PasswordResetConfirmResponseSchema,
-    PasswordResetConfirmSchema
-)
+from app.schemas.v1.auth import (AuthSchema, LogoutResponseSchema,
+                                 PasswordResetConfirmResponseSchema,
+                                 PasswordResetConfirmSchema,
+                                 PasswordResetResponseSchema,
+                                 TokenResponseSchema)
 from app.schemas.v1.users import UserCredentialsSchema
 from app.services.v1.base import BaseService
+
 from .data_manager import AuthDataManager
 
 
@@ -77,8 +73,7 @@ class AuthService(BaseService):
             ForbiddenError: Если аккаунт деактивирован
         """
         credentials = AuthSchema(
-            username=form_data.username,
-            password=form_data.password
+            username=form_data.username, password=form_data.password
         )
 
         identifier = credentials.username
@@ -101,8 +96,7 @@ class AuthService(BaseService):
 
         if not user_model:
             self.logger.warning(
-                "Пользователь не найден",
-                extra={"identifier": identifier}
+                "Пользователь не найден", extra={"identifier": identifier}
             )
             raise InvalidCredentialsError()
 
@@ -154,8 +148,7 @@ class AuthService(BaseService):
         )
 
         await self.data_manager.update_items(
-            user_schema.id,
-            {"last_login": datetime.now(timezone.utc)}
+            user_schema.id, {"last_login": datetime.now(timezone.utc)}
         )
 
         # Создаем токены
@@ -163,8 +156,7 @@ class AuthService(BaseService):
         refresh_token = await self.create_refresh_token(user_schema.id)
 
         return TokenResponseSchema(
-            access_token=access_token,
-            refresh_token=refresh_token
+            access_token=access_token, refresh_token=refresh_token
         )
 
     async def create_token(self, user_schema: UserCredentialsSchema) -> str:
@@ -179,25 +171,18 @@ class AuthService(BaseService):
         """
         payload = TokenManager.create_payload(user_schema)
 
-        self.logger.debug(
-            "Создан payload токена",
-            extra={"payload": payload}
-        )
+        self.logger.debug("Создан payload токена", extra={"payload": payload})
 
         access_token = TokenManager.generate_token(payload)
 
         self.logger.debug(
-            "Сгенерирован токен",
-            extra={"access_token_length": len(access_token)}
+            "Сгенерирован токен", extra={"access_token_length": len(access_token)}
         )
 
         await self.redis_data_manager.save_token(user_schema, access_token)
         self.logger.info(
             "Токен создан и сохранен в Redis",
-            extra={
-                "user_id": user_schema.id,
-                "access_token_length": len(access_token)
-            },
+            extra={"user_id": user_schema.id, "access_token_length": len(access_token)},
         )
 
         return access_token
@@ -214,16 +199,13 @@ class AuthService(BaseService):
         """
         payload = TokenManager.create_refresh_payload(user_id)
 
-        self.logger.debug(
-            "Создан payload refresh токена",
-            extra={"payload": payload}
-        )
+        self.logger.debug("Создан payload refresh токена", extra={"payload": payload})
 
         refresh_token = TokenManager.generate_token(payload)
 
         self.logger.debug(
             "Сгенерирован refresh токен",
-            extra={"refresh_token_length": len(refresh_token)}
+            extra={"refresh_token_length": len(refresh_token)},
         )
 
         await self.redis_data_manager.save_refresh_token(user_id, refresh_token)
@@ -257,7 +239,9 @@ class AuthService(BaseService):
             user_id = TokenManager.validate_refresh_token(payload)
 
             # Проверяем, что refresh токен существует в Redis
-            if not await self.redis_data_manager.check_refresh_token(user_id, refresh_token):
+            if not await self.redis_data_manager.check_refresh_token(
+                user_id, refresh_token
+            ):
                 self.logger.warning(
                     "Попытка использовать неизвестный refresh токен",
                     extra={"user_id": user_id},
@@ -289,15 +273,14 @@ class AuthService(BaseService):
             )
 
             return TokenResponseSchema(
-                access_token=access_token,
-                refresh_token=new_refresh_token
+                access_token=access_token, refresh_token=new_refresh_token
             )
 
         except (TokenExpiredError, TokenInvalidError) as e:
             self.logger.warning(
                 "Ошибка при обновлении токена: %s",
                 type(e).__name__,
-                extra={"error_type": type(e).__name__}
+                extra={"error_type": type(e).__name__},
             )
             raise
 
@@ -435,15 +418,7 @@ class AuthService(BaseService):
             # Проверяем и декодируем токен
             payload = TokenManager.verify_token(reset_data.token)
 
-            # Проверяем тип токена
-            if payload.get("type") != "password_reset":
-                self.logger.warning(
-                    "Неверный тип токена", extra={"type": payload.get("type")}
-                )
-                raise TokenInvalidError()
-
-            # Получаем ID пользователя
-            user_id = int(payload["sub"])
+            user_id = TokenManager.validate_password_reset_token(payload)
 
             # Проверяем существование пользователя
             user = await self.data_manager.get_item_by_field("id", user_id)
@@ -483,12 +458,4 @@ class AuthService(BaseService):
         Returns:
             str: Токен для сброса пароля
         """
-        payload = {
-            "sub": str(user_id),
-            "type": "password_reset",
-            "expires_at": (
-                int(datetime.now(timezone.utc).timestamp())
-                + 1800  # 30 минут (в секундах)
-            ),
-        }
-        return TokenManager.generate_token(payload)
+        return TokenManager.generate_password_reset_token(user_id)

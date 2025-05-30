@@ -10,6 +10,7 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.core.exceptions.handlers import register_exception_handlers
 from app.core.integrations.messaging.setup import setup_messaging
 from app.core.logging import setup_logging

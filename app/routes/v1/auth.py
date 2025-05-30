@@ -15,28 +15,27 @@ Routes:
 Classes:
     AuthRouter: Класс для настройки маршрутов аутентификации
 """
+
 from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
 from redis import Redis
-from app.core.connections.database import get_db_session
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.connections.cache import get_redis_client
+from app.core.connections.database import get_db_session
 from app.routes.base import BaseRouter
-from app.schemas import (
-    TokenResponseSchema,
-    LogoutResponseSchema,
-    ForgotPasswordSchema,
-    PasswordResetResponseSchema,
-    PasswordResetConfirmSchema,
-    PasswordResetConfirmResponseSchema,
-    InvalidCredentialsResponseSchema,
-    TokenExpiredResponseSchema,
-    TokenInvalidResponseSchema,
-    TokenMissingResponseSchema,
-    UserInactiveResponseSchema,
-    WeakPasswordResponseSchema,
-    RateLimitExceededResponseSchema
-)
+from app.schemas import (ForgotPasswordSchema,
+                         InvalidCredentialsResponseSchema,
+                         LogoutResponseSchema,
+                         PasswordResetConfirmResponseSchema,
+                         PasswordResetConfirmSchema,
+                         PasswordResetResponseSchema,
+                         RateLimitExceededResponseSchema,
+                         TokenExpiredResponseSchema,
+                         TokenInvalidResponseSchema,
+                         TokenMissingResponseSchema, TokenResponseSchema,
+                         UserInactiveResponseSchema,
+                         WeakPasswordResponseSchema)
 from app.services.v1.auth.service import AuthService
 
 
@@ -78,26 +77,26 @@ class AuthRouter(BaseRouter):
             responses={
                 200: {
                     "model": TokenResponseSchema,
-                    "description": "Успешная аутентификация"
+                    "description": "Успешная аутентификация",
                 },
                 401: {
                     "model": InvalidCredentialsResponseSchema,
-                    "description": "Неверные учетные данные"
+                    "description": "Неверные учетные данные",
                 },
                 403: {
                     "model": UserInactiveResponseSchema,
-                    "description": "Аккаунт пользователя деактивирован"
+                    "description": "Аккаунт пользователя деактивирован",
                 },
                 429: {
                     "model": RateLimitExceededResponseSchema,
-                    "description": "Превышен лимит запросов"
-                }
-            }
+                    "description": "Превышен лимит запросов",
+                },
+            },
         )
         async def authenticate(
             form_data: OAuth2PasswordRequestForm = Depends(),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client)
+            redis: Redis = Depends(get_redis_client),
         ) -> TokenResponseSchema:
             """
             ## 🔐 Аутентификация пользователя
@@ -129,34 +128,34 @@ class AuthRouter(BaseRouter):
             responses={
                 200: {
                     "model": TokenResponseSchema,
-                    "description": "Токен успешно обновлен"
+                    "description": "Токен успешно обновлен",
                 },
                 401: {
                     "model": TokenMissingResponseSchema,
-                    "description": "Refresh токен отсутствует"
+                    "description": "Refresh токен отсутствует",
                 },
                 419: {
                     "model": TokenExpiredResponseSchema,
-                    "description": "Refresh токен просрочен"
+                    "description": "Refresh токен просрочен",
                 },
                 422: {
                     "model": TokenInvalidResponseSchema,
-                    "description": "Невалидный refresh токен"
+                    "description": "Невалидный refresh токен",
                 },
                 429: {
                     "model": RateLimitExceededResponseSchema,
-                    "description": "Превышен лимит запросов"
-                }
-            }
+                    "description": "Превышен лимит запросов",
+                },
+            },
         )
         async def refresh_token(
             refresh_token: str = Header(
                 ...,
                 description="Refresh токен для получения нового access токена",
-                example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
             ),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client)
+            redis: Redis = Depends(get_redis_client),
         ) -> TokenResponseSchema:
             """
             ## 🔄 Обновление токена доступа
@@ -188,26 +187,26 @@ class AuthRouter(BaseRouter):
             responses={
                 200: {
                     "model": LogoutResponseSchema,
-                    "description": "Успешный выход из системы"
+                    "description": "Успешный выход из системы",
                 },
                 401: {
                     "model": TokenMissingResponseSchema,
-                    "description": "Токен отсутствует"
+                    "description": "Токен отсутствует",
                 },
                 422: {
                     "model": TokenInvalidResponseSchema,
-                    "description": "Невалидный токен"
-                }
-            }
+                    "description": "Невалидный токен",
+                },
+            },
         )
         async def logout(
             authorization: str = Header(
                 None,
                 description="Заголовок Authorization с токеном Bearer",
-                example="Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                example="Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
             ),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client)
+            redis: Redis = Depends(get_redis_client),
         ) -> LogoutResponseSchema:
             """
             ## 🚪 Выход из системы
@@ -237,21 +236,19 @@ class AuthRouter(BaseRouter):
             responses={
                 200: {
                     "model": PasswordResetResponseSchema,
-                    "description": "Ссылка для сброса пароля отправлена"
+                    "description": "Ссылка для сброса пароля отправлена",
                 },
-                404: {
-                    "description": "Пользователь с указанным email не найден"
-                },
+                404: {"description": "Пользователь с указанным email не найден"},
                 429: {
                     "model": RateLimitExceededResponseSchema,
-                    "description": "Превышен лимит запросов на восстановление"
-                }
-            }
+                    "description": "Превышен лимит запросов на восстановление",
+                },
+            },
         )
         async def forgot_password(
             forgot_data: ForgotPasswordSchema,
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client)
+            redis: Redis = Depends(get_redis_client),
         ) -> PasswordResetResponseSchema:
             """
             ## 📧 Запрос восстановления пароля
@@ -272,8 +269,9 @@ class AuthRouter(BaseRouter):
             * Ссылки имеют ограниченный срок действия
             * Одноразовые токены для сброса пароля
             """
-            return await AuthService(session, redis).send_password_reset_email(forgot_data)
-
+            return await AuthService(session, redis).send_password_reset_email(
+                forgot_data
+            )
 
         @self.router.post(
             path="/reset-password",
@@ -283,26 +281,26 @@ class AuthRouter(BaseRouter):
             responses={
                 200: {
                     "model": PasswordResetConfirmResponseSchema,
-                    "description": "Пароль успешно изменен"
+                    "description": "Пароль успешно изменен",
                 },
                 400: {
                     "model": WeakPasswordResponseSchema,
-                    "description": "Пароль не соответствует требованиям безопасности"
+                    "description": "Пароль не соответствует требованиям безопасности",
                 },
                 419: {
                     "model": TokenExpiredResponseSchema,
-                    "description": "Токен восстановления просрочен"
+                    "description": "Токен восстановления просрочен",
                 },
                 422: {
                     "model": TokenInvalidResponseSchema,
-                    "description": "Невалидный токен восстановления"
-                }
-            }
+                    "description": "Невалидный токен восстановления",
+                },
+            },
         )
         async def reset_password(
             reset_data: PasswordResetConfirmSchema,
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client)
+            redis: Redis = Depends(get_redis_client),
         ) -> PasswordResetConfirmResponseSchema:
             """
             ## 🔑 Подтверждение сброса пароля

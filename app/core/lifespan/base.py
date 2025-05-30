@@ -129,8 +129,8 @@ async def run_startup_handlers(app: FastAPI):
         ```
     """
 
-    from app.core.lifespan.database import initialize_database
     from app.core.lifespan.clients import initialize_clients
+    from app.core.lifespan.database import initialize_database
 
     # Добавляем обработчики если их нет (защита от дублирования)
     if initialize_database not in startup_handlers:
@@ -171,10 +171,9 @@ async def run_shutdown_handlers(app: FastAPI):
         await run_shutdown_handlers(app)
         ```
     """
-    from app.core.lifespan.database import close_database_connection
     from app.core.lifespan.clients import close_clients
+    from app.core.lifespan.database import close_database_connection
 
-    
     # Добавляем обработчики если их нет (защита от дублирования)
     if close_database_connection not in shutdown_handlers:
         shutdown_handlers.append(close_database_connection)

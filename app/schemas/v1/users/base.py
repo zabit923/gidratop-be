@@ -393,6 +393,7 @@ class UserStatusDataSchema(CommonBaseSchema):
         examples=[1642248600, None],
     )
 
+
 class UserCredentialsSchema(CommonBaseSchema):
     """
     Схема данных пользователя для аутентификации.

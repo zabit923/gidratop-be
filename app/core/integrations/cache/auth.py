@@ -267,6 +267,7 @@ class AuthRedisDataManager(BaseRedisDataManager):
 
         # Устанавливаем TTL для ключа (например, 60 дней)
         from app.core.settings import settings
+
         await self.set_expire(key, settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
 
     async def check_refresh_token(self, user_id: int, token: str) -> bool:

@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.connections.database import get_db_session
 from app.routes.base import BaseRouter
-from app.services.v1.registration.service import RegisterService
 from app.schemas import RegistrationRequestSchema, RegistrationResponseSchema
+from app.services.v1.registration.service import RegisterService
+
 
 class RegisterRouter(BaseRouter):
     def __init__(self):

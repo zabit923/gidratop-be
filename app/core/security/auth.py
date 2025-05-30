@@ -19,17 +19,14 @@
 """
 
 import logging
+
 from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.connections.database import get_db_session
-from app.core.exceptions import (
-    InvalidCredentialsError,
-    TokenError,
-    TokenInvalidError,
-    TokenMissingError
-)
+from app.core.exceptions import (InvalidCredentialsError, TokenError,
+                                 TokenInvalidError, TokenMissingError)
 from app.core.security.token import TokenManager
 from app.core.settings import settings
 from app.schemas import CurrentUserSchema, UserCredentialsSchema
@@ -84,8 +81,7 @@ class AuthenticationManager:
             InvalidCredentialsError: Если пользователь не найден
         """
         logger.debug(
-            "Обработка запроса аутентификации с заголовками: %s",
-            request.headers
+            "Обработка запроса аутентификации с заголовками: %s", request.headers
         )
         logger.debug("Начало получения данных пользователя")
         logger.debug("Получен токен: %s", token)

@@ -1,31 +1,28 @@
-from .v1.errors import RateLimitErrorSchema, RateLimitExceededResponseSchema
+from .v1.auth import (ForgotPasswordSchema, InvalidCredentialsResponseSchema,
+                      LogoutResponseSchema, PasswordResetConfirmResponseSchema,
+                      PasswordResetConfirmSchema, PasswordResetResponseSchema,
+                      TokenExpiredResponseSchema, TokenInvalidResponseSchema,
+                      TokenMissingResponseSchema, TokenResponseSchema,
+                      UserInactiveResponseSchema, WeakPasswordResponseSchema)
 from .v1.base import (BaseCommonResponseSchema, BaseRequestSchema,
                       BaseResponseSchema, BaseSchema, CommonBaseSchema,
                       ErrorResponseSchema, ItemResponseSchema,
                       ListResponseSchema)
-from .v1.pagination import Page, PaginationParams
-from .v1.users import (CurrentUserSchema, UserDetailDataSchema,
-                       UserPrivateSchema, UserProfileSchema, UserPublicSchema,
-                       UserSchema, UserStatusDataSchema, UserCredentialsSchema)
-from .v1.registration import (RegistrationDataSchema,
-                              RegistrationRequestSchema,
-                              RegistrationResponseSchema)
-from .v1.auth import (
-    ForgotPasswordSchema,
-    PasswordResetConfirmSchema,
-    TokenResponseSchema,
-    LogoutResponseSchema,
-    PasswordResetResponseSchema,
-    PasswordResetConfirmResponseSchema,
-    InvalidCredentialsResponseSchema,
-    TokenExpiredResponseSchema,
-    TokenInvalidResponseSchema,
-    TokenMissingResponseSchema,
-    UserInactiveResponseSchema,
-    WeakPasswordResponseSchema
-)
+from .v1.errors import RateLimitErrorSchema, RateLimitExceededResponseSchema
 from .v1.mail import (EmailMessageSchema, PasswordResetEmailSchema,
                       RegistrationSuccessEmailSchema, VerificationEmailSchema)
+from .v1.pagination import Page, PaginationParams
+from .v1.registration import (RegistrationDataSchema,
+                              RegistrationRequestSchema,
+                              RegistrationResponseSchema,
+                              ResendVerificationResponseSchema,
+                              VerificationResponseSchema,
+                              VerificationStatusResponseSchema)
+from .v1.users import (CurrentUserSchema, UserCredentialsSchema,
+                       UserDetailDataSchema, UserPrivateSchema,
+                       UserProfileSchema, UserPublicSchema, UserSchema,
+                       UserStatusDataSchema)
+
 __all__ = [
     # Errors
     "RateLimitErrorSchema",
@@ -55,6 +52,9 @@ __all__ = [
     "RegistrationDataSchema",
     "RegistrationResponseSchema",
     "RegistrationRequestSchema",
+    "VerificationResponseSchema",
+    "ResendVerificationResponseSchema",
+    "VerificationStatusResponseSchema",
     # Auth
     "ForgotPasswordSchema",
     "PasswordResetConfirmSchema",
@@ -72,5 +72,5 @@ __all__ = [
     "EmailMessageSchema",
     "PasswordResetEmailSchema",
     "RegistrationSuccessEmailSchema",
-    "VerificationEmailSchema"
+    "VerificationEmailSchema",
 ]

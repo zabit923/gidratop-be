@@ -3,6 +3,7 @@
 
 Обеспечивает доступ к данным пользователей для операций аутентификации.
 """
+
 import re
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -33,54 +34,33 @@ class AuthDataManager(BaseEntityManager[UserCredentialsSchema]):
         """
         Получение пользователя по имени пользователя, email или телефону.
 
+        Валидация identifier уже выполнена в Pydantic схеме.
+
         Args:
-            identifier: Имя пользователя, email или телефон.
+            identifier: Имя пользователя, email или телефон (уже валидированный)
 
         Returns:
-            UserModel | None: Пользователь или None, если пользователь не найден
+            UserModel | None: Пользователь или None, если не найден
         """
-        try:
-            self.logger.info(
-                    "Поиск пользователя по идентификатору",
-                    extra={"identifier": identifier}
-                )
-
-            # Проверяем, является ли identifier email-ом
-            if "@" in identifier:
-                user = await self.get_model_by_field("email", identifier)
-                if user:
-                    self.logger.info(
-                            "Пользователь найден по email",
-                            extra={"identifier": identifier, "user_id": user.id}
-                        )
-                    return user
-
-            # Проверяем, является ли identifier телефоном
-            # Паттерн для телефона в формате +7 (XXX) XXX-XX-XX
-            phone_pattern = r"^\+7\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$"
-            if re.match(phone_pattern, identifier):
-                user = await self.get_model_by_field("phone", identifier)
-                if user:
-                    self.logger.info(
-                            "Пользователь найден по телефону",
-                            extra={"identifier": identifier, "user_id": user.id}
-                        )
-                    return user
-
-            # В противном случае, ищем по имени пользователя
-            user = await self.get_model_by_field("username", identifier)
-            if user:
-                self.logger.info(
-                        "Пользователь найден по username",
-                        extra={"identifier": identifier, "user_id": user.id}
-                    )
-                return user
-
-            # Если ничего не найдено, возвращаем None
-            return None
-        except Exception as e:
-            self.logger.error(
-                "Ошибка при поиске пользователя",
-                extra={"identifier": identifier, "error": str(e)}
+        statement = select(UserModel).where(
+            or_(
+                UserModel.email == identifier,
+                UserModel.username == identifier,
+                UserModel.phone == identifier
             )
-            return None
+        )
+
+        user = await self.get_one(statement)
+
+        if user:
+            self.logger.info(
+                "Пользователь найден",
+                extra={"identifier": identifier, "user_id": user.id}
+            )
+        else:
+            self.logger.info(
+                "Пользователь не найден",
+                extra={"identifier": identifier}
+            )
+
+        return user

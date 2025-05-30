@@ -1,6 +1,7 @@
 from app.routes.base import BaseRouter
-from app.routes.v1.registration import RegisterRouter
 from app.routes.v1.auth import AuthRouter
+from app.routes.v1.registration import RegisterRouter
+
 
 class APIv1(BaseRouter):
     def configure_routes(self):
