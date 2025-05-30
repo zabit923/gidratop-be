@@ -279,15 +279,19 @@ class TokenInvalidError(TokenError):
 
     Возникает, когда предоставленный токен имеет неверный формат,
     поврежден или подпись не может быть проверена.
-
-    Attributes:
-        detail (str): "Невалидный токен".
     """
 
-    def __init__(self):
+    def __init__(self, detail: str = "Невалидный токен", extra: Optional[Dict[str, Any]] = None):
         """
-        Инициализирует исключение TokenInvalidError с предопределенными значениями.
+        Инициализирует исключение TokenInvalidError.
+
+        Args:
+            detail: Сообщение об ошибке
+            extra: Дополнительные данные об ошибке
         """
         super().__init__(
-            detail="Невалидный токен", error_type="token_invalid", status_code=422
+            detail=detail,
+            error_type="token_invalid",
+            status_code=422,
+            extra=extra
         )

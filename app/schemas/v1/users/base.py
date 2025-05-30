@@ -392,3 +392,36 @@ class UserStatusDataSchema(CommonBaseSchema):
         description="Время последней активности в Unix timestamp (секунды)",
         examples=[1642248600, None],
     )
+
+
+class UserCredentialsSchema(CommonBaseSchema):
+    """
+    Схема данных пользователя для аутентификации.
+
+    Содержит основные поля пользователя, необходимые для проверки
+    учетных данных и создания токенов. Включает хешированный пароль
+    для внутренних операций аутентификации.
+
+    Attributes:
+        id (int): Уникальный идентификатор пользователя
+        username (str): Имя пользователя для входа
+        email (EmailStr): Email адрес пользователя
+        role (UserRole): Роль пользователя в системе
+        hashed_password (str): Хешированный пароль пользователя
+        is_active (bool): Статус активности аккаунта
+        is_verified (bool): Статус верификации email/телефона
+
+    Usage:
+        Используется внутри системы аутентификации для проверки
+        учетных данных и создания JWT токенов. НЕ должна возвращаться
+        в API ответах из-за наличия хешированного пароля.
+
+    """
+
+    id: int = Field(description="Уникальный идентификатор пользователя")
+    username: str = Field(description="Имя пользователя")
+    email: EmailStr = Field(description="Email адрес пользователя")
+    role: UserRole = Field(description="Роль пользователя")
+    hashed_password: str = Field(description="Хешированный пароль")
+    is_active: bool = Field(default=True, description="Статус активности")
+    is_verified: bool = Field(default=False, description="Статус верификации")
