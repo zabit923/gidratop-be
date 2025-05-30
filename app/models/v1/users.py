@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Numeric
+from sqlalchemy import ForeignKey, Numeric, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.v1.base import BaseModel
@@ -111,8 +111,14 @@ class UserModel(BaseModel):
     total_spent: Mapped[Decimal] = mapped_column(
         Numeric(precision=10, scale=2), default=0
     )
-    last_order_date: Mapped[datetime] = mapped_column(nullable=True)
-    last_login: Mapped[datetime] = mapped_column(nullable=True)
+    last_order_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    last_login: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
     registration_source: Mapped[str] = mapped_column(nullable=True)
 
     # Связи
