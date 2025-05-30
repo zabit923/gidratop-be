@@ -30,7 +30,7 @@ from app.core.exceptions import (InvalidCredentialsError, TokenError,
 from app.core.security.token import TokenManager
 from app.core.settings import settings
 from app.schemas import CurrentUserSchema, UserCredentialsSchema
-from app.services import AuthService
+from app.services.v1.users.data_manager import UserDataManager
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +95,9 @@ class AuthenticationManager:
             payload = TokenManager.verify_token(token)
             user_email = TokenManager.validate_payload(payload)
 
-            # Получаем пользователя через сервис
-            auth_service = AuthService(session)
-            user = await auth_service.get_user_by_identifier(user_email)
+            # Получаем пользователя через UserDataManager
+            user_manager = UserDataManager(session)
+            user = await user_manager.get_user_by_identifier(user_email)
 
             if not user:
                 logger.debug("Пользователь с email %s не найден", user_email)
