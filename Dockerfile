@@ -6,13 +6,14 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apk update
-RUN apk add -v -f --no-cache --virtual .build-deps \
+
+RUN apk add --no-cache --virtual .build-deps \
     gcc \
     python3-dev \
     musl-dev \
-    postgresql16-dev \
-    postgresql16-client \
-    libpq \
+    postgresql-dev \
+    postgresql-client \
+    libpq-dev \
     poppler-utils
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
