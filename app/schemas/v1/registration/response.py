@@ -9,6 +9,7 @@
     - RegistrationDataSchema: Данные пользователя в ответе регистрации
     - RegistrationResponseSchema: Полная схема ответа API при регистрации
 """
+from typing import Optional
 
 from datetime import datetime
 
@@ -102,6 +103,11 @@ class RegistrationResponseSchema(ItemResponseSchema[RegistrationDataSchema]):
         success (bool): Статус успешности операции (наследуется, всегда True)
         message (str): Информационное сообщение о результате регистрации
         item (RegistrationDataSchema): Данные зарегистрированного пользователя
+        access_token (Optional[str]): JWT токен доступа (ограниченный до верификации email)
+        refresh_token (Optional[str]): JWT токен для обновления access токена
+        token_type (str): Тип токена
+        requires_verification (bool): Требуется ли верификация email для полного доступа
+
 
     Example:
         ```python
@@ -118,6 +124,10 @@ class RegistrationResponseSchema(ItemResponseSchema[RegistrationDataSchema]):
                 "created_at": "2024-01-15T10:30:00Z",
                 "referral_code": "REF123ABC"
             }
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "token_type": "bearer",
+            "requires_verification": True
         }
         ```
 
@@ -136,12 +146,49 @@ class RegistrationResponseSchema(ItemResponseSchema[RegistrationDataSchema]):
     message: str = Field(
         default="Регистрация успешно завершена",
         description="Сообщение о результате операции регистрации",
-        examples=[
-            "Регистрация успешно завершена",
-            "Пользователь создан, проверьте email для активации",
-            "Аккаунт создан успешно",
-        ],
     )
+
+    access_token: Optional[str] = Field(
+        default=None,
+        description="JWT токен доступа (ограниченный до верификации email)"
+    )
+
+    refresh_token: Optional[str] = Field(
+        default=None,
+        description="JWT токен для обновления access токена"
+    )
+
+    token_type: str = Field(
+        default="bearer",
+        description="Тип токена"
+    )
+
+    requires_verification: bool = Field(
+        default=True,
+        description="Требуется ли верификация email для полного доступа"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Регистрация успешно завершена. Подтвердите email для полного доступа.",
+                "item": {
+                    "user_id": 123,
+                    "username": "john_doe",
+                    "email": "john@example.com",
+                    "role": "user",
+                    "is_active": True,
+                    "is_verified": False,
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "referral_code": "REF12345678"
+                },
+                "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                "token_type": "bearer",
+                "requires_verification": True
+            }
+        }
 
 
 class VerificationResponseSchema(BaseResponseSchema):
@@ -151,10 +198,34 @@ class VerificationResponseSchema(BaseResponseSchema):
     Attributes:
         user_id (int): ID пользователя
         message (str): Сообщение об успешной верификации
+        access_token (Optional[str]): Новый JWT токен доступа
+        refresh_token (Optional[str]): Новый JWT токен для обновления
+        token_type (str): Тип токена
+        # verified_at (Optional[datetime]): Время верификации (пока закомментировано, не используется)
     """
 
-    user_id: int
-    message: str = "Email успешно подтвержден"
+    user_id: int = Field(description="ID верифицированного пользователя")
+
+    access_token: Optional[str] = Field(
+        default=None,
+        description="Новый полный JWT токен доступа"
+    )
+
+    refresh_token: Optional[str] = Field(
+        default=None,
+        description="Новый JWT токен для обновления"
+    )
+
+    token_type: str = Field(
+        default="bearer",
+        description="Тип токена"
+    )
+
+    # !Пока оставим закомментированным, по месту не используется.
+    # verified_at: Optional[datetime] = Field(
+    #     default=None,
+    #     description="Время верификации"
+    # )
 
 
 class ResendVerificationResponseSchema(BaseResponseSchema):

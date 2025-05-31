@@ -15,7 +15,7 @@ Routes:
 Classes:
     AuthRouter: Класс для настройки маршрутов аутентификации
 """
-
+from typing import Optional
 from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
@@ -59,7 +59,7 @@ class AuthRouter(BaseRouter):
         """
         Инициализирует роутер аутентификации.
         """
-        super().__init__(prefix="auth", tags=["Аутентификация"])
+        super().__init__(prefix="auth", tags=["Authentication"])
 
     def configure(self):
         """
@@ -73,7 +73,7 @@ class AuthRouter(BaseRouter):
             path="",
             response_model=TokenResponseSchema,
             summary="Аутентификация пользователя",
-            description="Аутентифицирует пользователя и возвращает JWT токены",
+            # description="Аутентифицирует пользователя и возвращает JWT токены",
             responses={
                 200: {
                     "model": TokenResponseSchema,
@@ -96,7 +96,7 @@ class AuthRouter(BaseRouter):
         async def authenticate(
             form_data: OAuth2PasswordRequestForm = Depends(),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> TokenResponseSchema:
             """
             ## 🔐 Аутентификация пользователя
@@ -124,7 +124,7 @@ class AuthRouter(BaseRouter):
             path="/refresh",
             response_model=TokenResponseSchema,
             summary="Обновление токена доступа",
-            description="Получение нового access токена с помощью refresh токена",
+            # description="Получение нового access токена с помощью refresh токена",
             responses={
                 200: {
                     "model": TokenResponseSchema,
@@ -155,7 +155,7 @@ class AuthRouter(BaseRouter):
                 example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
             ),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> TokenResponseSchema:
             """
             ## 🔄 Обновление токена доступа
@@ -183,7 +183,7 @@ class AuthRouter(BaseRouter):
             path="/logout",
             response_model=LogoutResponseSchema,
             summary="Выход из системы",
-            description="Завершение сессии пользователя и аннулирование токенов",
+            # description="Завершение сессии пользователя и аннулирование токенов",
             responses={
                 200: {
                     "model": LogoutResponseSchema,
@@ -206,7 +206,7 @@ class AuthRouter(BaseRouter):
                 example="Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
             ),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> LogoutResponseSchema:
             """
             ## 🚪 Выход из системы
@@ -248,7 +248,7 @@ class AuthRouter(BaseRouter):
         async def forgot_password(
             forgot_data: ForgotPasswordSchema,
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> PasswordResetResponseSchema:
             """
             ## 📧 Запрос восстановления пароля
@@ -300,7 +300,7 @@ class AuthRouter(BaseRouter):
         async def reset_password(
             reset_data: PasswordResetConfirmSchema,
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> PasswordResetConfirmResponseSchema:
             """
             ## 🔑 Подтверждение сброса пароля
