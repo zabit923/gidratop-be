@@ -11,7 +11,7 @@ from .v1.base import (BaseCommonResponseSchema, BaseRequestSchema,
 from .v1.errors import RateLimitErrorSchema, RateLimitExceededResponseSchema
 from .v1.mail import (EmailMessageSchema, PasswordResetEmailSchema,
                       RegistrationSuccessEmailSchema, VerificationEmailSchema)
-from .v1.pagination import Page, PaginationParams
+from .v1.pagination import Page, PaginationParams, UserSortFields
 from .v1.registration import (RegistrationDataSchema,
                               RegistrationRequestSchema,
                               RegistrationResponseSchema,
@@ -24,7 +24,8 @@ from .v1.registration import (RegistrationDataSchema,
 from .v1.users import (CurrentUserSchema, UserCredentialsSchema,
                        UserDetailDataSchema, UserPrivateSchema,
                        UserProfileSchema, UserPublicSchema, UserSchema,
-                       UserStatusDataSchema, UserNotFoundResponseSchema)
+                       UserStatusDataSchema, UserNotFoundResponseSchema,
+                       UserListResponseSchema)
 
 __all__ = [
     # Errors
@@ -42,6 +43,7 @@ __all__ = [
     # Pagination
     "PaginationParams",
     "Page",
+    "UserSortFields",
     # Users
     "UserSchema",
     "UserPublicSchema",
@@ -52,6 +54,7 @@ __all__ = [
     "UserStatusDataSchema",
     "UserCredentialsSchema",
     "UserNotFoundResponseSchema",
+    "UserListResponseSchema",
     # Registration
     "RegistrationDataSchema",
     "RegistrationResponseSchema",

@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import (ForbiddenError, InvalidCredentialsError,
                                  TokenExpiredError, TokenInvalidError,
                                  UserNotFoundError)
-from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.integrations.mail import AuthEmailDataManager
+from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.security.password import PasswordHasher
 from app.core.security.token import TokenManager
 from app.schemas.v1.auth import (AuthSchema, LogoutResponseSchema,
@@ -44,7 +44,7 @@ class AuthService(BaseService):
         data_manager: Менеджер данных для аутентификации
     """
 
-    def __init__(self, session: AsyncSession, redis: Redis):
+    def __init__(self, session: AsyncSession, redis: Optional[Redis] = None):
         """
         Инициализирует сервис аутентификации.
 
@@ -53,8 +53,9 @@ class AuthService(BaseService):
         """
         super().__init__(session)
         self.data_manager = AuthDataManager(session)
-        self.redis_data_manager = AuthRedisDataManager(redis)
         self.email_data_manager = AuthEmailDataManager()
+        self.redis_data_manager = AuthRedisDataManager(redis) if redis else None
+
 
     async def authenticate(
         self, form_data: OAuth2PasswordRequestForm
@@ -169,11 +170,10 @@ class AuthService(BaseService):
         Returns:
             str: Access токен
         """
-        payload = TokenManager.create_payload(user_schema)
-
-        self.logger.debug("Создан payload токена", extra={"payload": payload})
-
-        access_token = TokenManager.generate_token(payload)
+        if user_schema.is_verified:
+            access_token = TokenManager.create_full_token(user_schema)
+        else:
+            access_token = TokenManager.create_limited_token(user_schema)
 
         self.logger.debug(
             "Сгенерирован токен", extra={"access_token_length": len(access_token)}
@@ -197,11 +197,7 @@ class AuthService(BaseService):
         Returns:
             str: Refresh токен
         """
-        payload = TokenManager.create_refresh_payload(user_id)
-
-        self.logger.debug("Создан payload refresh токена", extra={"payload": payload})
-
-        refresh_token = TokenManager.generate_token(payload)
+        refresh_token = TokenManager.create_refresh_token(user_id)
 
         self.logger.debug(
             "Сгенерирован refresh токен",
@@ -209,6 +205,7 @@ class AuthService(BaseService):
         )
 
         await self.redis_data_manager.save_refresh_token(user_id, refresh_token)
+
         self.logger.info(
             "Refresh токен создан и сохранен в Redis",
             extra={"user_id": user_id, "refresh_token_length": len(refresh_token)},

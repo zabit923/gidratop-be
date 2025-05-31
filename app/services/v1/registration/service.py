@@ -7,19 +7,20 @@
 Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
-
-
+from typing import Optional
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import UserNotFoundError
 from app.core.integrations.mail import AuthEmailDataManager
-
+from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.security.token import TokenManager
 from app.models import UserModel
 from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
                          RegistrationResponseSchema,
                          VerificationResponseSchema,
-                         ResendVerificationResponseSchema)
+                         ResendVerificationResponseSchema,
+                         UserCredentialsSchema)
 from app.services.v1.base import BaseService
 
 from .data_manager import RegisterDataManager
@@ -41,7 +42,7 @@ class RegisterService(BaseService):
         email_data_manager: Менеджер для отправки email
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, redis: Optional[Redis] = None):
         """
         Инициализирует сервис регистрации.
 
@@ -51,6 +52,8 @@ class RegisterService(BaseService):
         super().__init__(session)
         self.data_manager = RegisterDataManager(session)
         self.email_data_manager = AuthEmailDataManager()
+        self.redis_data_manager = AuthRedisDataManager(redis) if redis else None
+
 
     async def create_user(
         self, user_data: RegistrationRequestSchema
@@ -61,8 +64,9 @@ class RegisterService(BaseService):
         Полный процесс:
         1. Валидация уникальности данных
         2. Создание пользователя в БД
-        3. Генерация токена верификации
+        3. Генерация токенов верификации и refresh токена
         4. Отправка письма верификации
+        5. Сохранение токенов в Redis
 
         Args:
             user_data: Данные для регистрации пользователя
@@ -90,15 +94,60 @@ class RegisterService(BaseService):
         # Отправляем письмо верификации
         await self._send_verification_email(created_user)
 
+        user_schema = UserCredentialsSchema.model_validate(created_user)
+        access_token = TokenManager.create_limited_token(user_schema)
+        refresh_token = TokenManager.create_refresh_token(created_user.id)
+
+        # Сохраняем токены в Redis
+        await self._save_tokens_to_redis(user_schema, access_token, refresh_token)
+
         # Формируем данные ответа
         response_data = self._build_registration_response(created_user)
 
-        self.logger.info("Пользователь успешно зарегистрирован: ID=%s", created_user.id)
+        self.logger.info("Пользователь зарегистрирован с ограниченными токенами: ID=%s", created_user.id)
 
         return RegistrationResponseSchema(
-            message="Регистрация успешно завершена",
-            item=response_data
+            message="Регистрация завершена. Подтвердите email для полного доступа.",
+            item=response_data,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            requires_verification=True
         )
+
+    async def _save_tokens_to_redis(
+        self,
+        user_schema: UserCredentialsSchema,
+        access_token: str,
+        refresh_token: str
+    ) -> None:
+        """
+        Сохраняет токены в Redis если доступен.
+
+        Args:
+            user_schema: Схема пользователя
+            access_token: Access токен
+            refresh_token: Refresh токен
+        """
+        if not self.redis_data_manager:
+            return
+
+        try:
+            # Сохраняем access токен
+            await self.redis_data_manager.save_token(user_schema, access_token)
+
+            # Сохраняем refresh токен
+            await self.redis_data_manager.save_refresh_token(user_schema.id, refresh_token)
+
+            self.logger.info(
+                "Токены сохранены в Redis",
+                extra={"user_id": user_schema.id}
+            )
+        except Exception as e:
+            self.logger.warning(
+                "Не удалось сохранить токены в Redis: %s",
+                e,
+                extra={"user_id": user_schema.id}
+            )
 
     async def verify_email(self, token: str) -> VerificationResponseSchema:
         """
@@ -134,14 +183,25 @@ class RegisterService(BaseService):
         # Подтверждаем email
         await self.data_manager.update_items(user_id, {"is_verified": True})
 
+        updated_user = await self.data_manager.get_item_by_field("id", user_id)
+        user_schema = UserCredentialsSchema.model_validate(updated_user)
+
+        new_access_token = TokenManager.create_full_token(user_schema)
+        new_refresh_token = TokenManager.create_refresh_token(user_id)
+
+        # Сохраняем новые токены в Redis
+        await self._save_tokens_to_redis(user_schema, new_access_token, new_refresh_token)
+
         # Отправляем письмо об успешной регистрации
         await self._send_registration_success_email(user)
 
-        self.logger.info("Email успешно подтвержден", extra={"user_id": user_id})
+        self.logger.info("Email верифицирован, выданы полные токены", extra={"user_id": user_id})
 
         return VerificationResponseSchema(
             user_id=user_id,
-            message="Email успешно подтвержден. Теперь вы можете войти в систему.",
+            message="Email успешно подтвержден. Получен полный доступ к системе.",
+            access_token=new_access_token,
+            refresh_token=new_refresh_token,
         )
 
     async def resend_verification_email(self, email: str) -> dict:

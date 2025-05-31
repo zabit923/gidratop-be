@@ -1,3 +1,75 @@
+"""
+Модуль схем пагинации и сортировки для API.
+
+Предоставляет универсальную систему пагинации с поддержкой:
+- Настраиваемых полей сортировки для разных сущностей
+- Валидации параметров сортировки
+- Стандартизированного формата ответов
+- Автоматического вычисления номера страницы
+
+Основные компоненты:
+- SortOption: Описание поля сортировки
+- BaseSortFields: Базовый класс с общими полями (created_at, updated_at)
+- SortFieldRegistry: Реестр полей сортировки для разных сущностей
+- PaginationParams: Параметры пагинации с валидацией
+- Page: Схема ответа с пагинированными данными
+
+Использование:
+1. Создайте класс полей сортировки для вашей сущности
+2. Зарегистрируйте его в SortFieldRegistry
+3. Используйте PaginationParams в endpoint'ах
+4. Возвращайте данные в формате Page
+
+Example:
+    ```python
+    # 1. Создание полей сортировки для товаров
+    class ProductSortFields(BaseSortFields):
+        NAME = SortOption(field="name", description="Сортировка по названию")
+        PRICE = SortOption(field="price", description="Сортировка по цене")
+        RATING = SortOption(field="rating", description="Сортировка по рейтингу")
+
+    # 2. Регистрация в реестре
+    SortFieldRegistry._registry["Product"] = ProductSortFields
+
+    # 3. Использование в endpoint
+    @router.get("/products", response_model=ProductListResponseSchema)
+    async def get_products(
+        skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
+        limit: int = Query(10, ge=1, le=100, description="Количество элементов на странице"),
+        sort_by: Optional[str] = Query(
+            ProductSortFields.get_default().field,
+            description=f"Поле для сортировки. Доступные: {', '.join(ProductSortFields.get_field_values())}",
+            enum=ProductSortFields.get_field_values(),
+        ),
+        sort_desc: bool = Query(True, description="Сортировка по убыванию"),
+        session: AsyncSession = Depends(get_db_session),
+    ) -> ProductListResponseSchema:
+        # Создание параметров пагинации с автоматической валидацией
+        pagination = PaginationParams(
+            skip=skip,
+            limit=limit,
+            sort_by=sort_by,
+            sort_desc=sort_desc,
+            entity_name="Product"  # Автоматически найдет ProductSortFields
+        )
+
+        # Получение данных из сервиса
+        products, total = await product_service.get_products(
+            pagination=pagination,
+            # ... другие фильтры
+        )
+
+        # Формирование ответа
+        page = Page(
+            items=products,
+            total=total,
+            page=pagination.page,  # Автоматически вычисляется
+            size=pagination.limit
+        )
+
+        return ProductListResponseSchema(data=page)
+    ```
+"""
 from typing import Dict, Generic, List, Type, TypeVar
 
 from pydantic import BaseModel
@@ -152,24 +224,24 @@ class SortFields(BaseSortFields):
     pass
 
 
-# class UserSortFields(BaseSortFields):
-#     """
-#     Поля сортировки для пользователей.
+class UserSortFields(BaseSortFields):
+    """
+    Поля сортировки для пользователей.
 
-#     Расширяет базовые поля сортировки, добавляя специфичные для пользователей
-#     поля, такие как имя пользователя.
+    Расширяет базовые поля сортировки, добавляя специфичные для пользователей
+    поля, такие как имя пользователя.
 
-#     Attributes:
-#         USERNAME (SortOption): Поле сортировки по имени пользователя.
+    Attributes:
+        USERNAME (SortOption): Поле сортировки по имени пользователя.
 
-#     Usage:
-#         fields = UserSortFields.get_field_values()
-#         # ['username', 'created_at', 'updated_at']
-#     """
+    Usage:
+        fields = UserSortFields.get_field_values()
+        # ['username', 'created_at', 'updated_at']
+    """
 
-#     USERNAME = SortOption(
-#         field="username", description="Сортировка по имени пользователя"
-#     )
+    USERNAME = SortOption(
+        field="username", description="Сортировка по имени пользователя"
+    )
 
 
 class SortFieldRegistry:
@@ -185,7 +257,7 @@ class SortFieldRegistry:
     """
 
     _registry: Dict[str, Type[BaseSortFields]] = {
-        # "User": UserSortFields,
+        "User": UserSortFields,
         "default": SortFields,
     }
 
