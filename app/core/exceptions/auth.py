@@ -281,7 +281,9 @@ class TokenInvalidError(TokenError):
     поврежден или подпись не может быть проверена.
     """
 
-    def __init__(self, detail: str = "Невалидный токен", extra: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, detail: str = "Невалидный токен", extra: Optional[Dict[str, Any]] = None
+    ):
         """
         Инициализирует исключение TokenInvalidError.
 
@@ -290,8 +292,5 @@ class TokenInvalidError(TokenError):
             extra: Дополнительные данные об ошибке
         """
         super().__init__(
-            detail=detail,
-            error_type="token_invalid",
-            status_code=422,
-            extra=extra
+            detail=detail, error_type="token_invalid", status_code=422, extra=extra
         )

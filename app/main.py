@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.exceptions.handlers import register_exception_handlers
 from app.core.integrations.messaging.setup import setup_messaging
 from app.core.logging import setup_logging
+from app.core.middlewares.auth_cookie import AuthCookieMiddleware
 from app.core.middlewares.activity import ActivityMiddleware
 from app.core.middlewares.logging import LoggingMiddleware
 from app.core.settings import settings
@@ -31,6 +32,7 @@ def create_application() -> FastAPI:
 
     register_exception_handlers(app=app)
 
+    app.add_middleware(AuthCookieMiddleware)
     app.add_middleware(ActivityMiddleware)
     app.add_middleware(LoggingMiddleware)
 

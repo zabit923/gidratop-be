@@ -4,13 +4,11 @@
 Содержит Pydantic схемы для исходящих данных endpoints аутентификации.
 Все схемы следуют единому формату: {success, message, data}.
 """
+
 from app.schemas.v1.base import BaseResponseSchema
-from .base import (
-    TokenDataSchema,
-    LogoutDataSchema,
-    PasswordResetDataSchema,
-    PasswordResetConfirmDataSchema
-)
+
+from .base import (LogoutDataSchema, PasswordResetConfirmDataSchema,
+                   PasswordResetDataSchema, TokenDataSchema)
 
 
 class TokenResponseSchema(BaseResponseSchema):
@@ -43,6 +41,7 @@ class TokenResponseSchema(BaseResponseSchema):
             "expires_in": 1800
         }
     """
+
     access_token: str
     refresh_token: str
     token_type: str = "Bearer"
@@ -71,6 +70,7 @@ class LogoutResponseSchema(BaseResponseSchema):
             }
         }
     """
+
     data: LogoutDataSchema
 
 
@@ -96,6 +96,7 @@ class PasswordResetResponseSchema(BaseResponseSchema):
             }
         }
     """
+
     data: PasswordResetDataSchema
 
 
@@ -120,6 +121,7 @@ class PasswordResetConfirmResponseSchema(BaseResponseSchema):
             }
         }
     """
+
     data: PasswordResetConfirmDataSchema
 
 
@@ -144,6 +146,7 @@ class OAuth2TokenResponseSchema(BaseResponseSchema):
         message: Сообщение об успешной авторизации
         data: Дублирование данных токенов для единообразия API
     """
+
     access_token: str
     refresh_token: str
     token_type: str = "Bearer"

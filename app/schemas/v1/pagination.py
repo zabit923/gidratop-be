@@ -70,6 +70,7 @@ Example:
         return ProductListResponseSchema(data=page)
     ```
 """
+
 from typing import Dict, Generic, List, Type, TypeVar
 
 from pydantic import BaseModel

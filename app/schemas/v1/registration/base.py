@@ -4,11 +4,14 @@
 Содержит классы данных, которые помещаются в поле `data` ответов API.
 Эти схемы описывают структуру полезной нагрузки ответов регистрации.
 """
-from typing import Optional
+
 from datetime import datetime
+from typing import Optional
+
 from pydantic import EmailStr, Field
 
 from app.schemas.v1.base import BaseCommonResponseSchema
+
 
 class RegistrationDataSchema(BaseCommonResponseSchema):
     """
@@ -19,14 +22,18 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
     данные такие как хешированный пароль.
 
     Attributes:
-        user_id (int): Уникальный идентификатор пользователя в системе
-        username (str): Имя пользователя для входа в систему
-        email (EmailStr): Email адрес пользователя
-        role (str): Роль пользователя в системе (по умолчанию "user")
-        is_active (bool): Статус активности аккаунта
-        is_verified (bool): Статус верификации email/телефона
-        created_at (datetime): Дата и время создания аккаунта
-        referral_code (str | None): Реферальный код пользователя (если есть)
+        user_id: Уникальный идентификатор пользователя в системе
+        username: Имя пользователя для входа в систему
+        email: Email адрес пользователя
+        role: Роль пользователя в системе (по умолчанию "user")
+        is_active: Статус активности аккаунта
+        is_verified: Статус верификации email (False при регистрации)
+        created_at: Дата и время создания аккаунта
+        referral_code: Реферальный код пользователя
+        access_token: Ограниченный JWT токен доступа (до верификации)
+        refresh_token: JWT токен для обновления access токена
+        token_type: Тип токена (всегда "bearer")
+        requires_verification: Флаг необходимости верификации email
 
     Example:
         ```python
@@ -35,10 +42,14 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
             "username": "john_doe",
             "email": "john@example.com",
             "role": "user",
-            "is_active": True,
-            "is_verified": False,
+            "is_active": true,
+            "is_verified": false,
             "created_at": "2024-01-15T10:30:00Z",
-            "referral_code": "REF123ABC"
+            "referral_code": "REF12345678",
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "token_type": "bearer",
+            "requires_verification": true
         }
         ```
     """
@@ -81,43 +92,77 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
         examples=["REF123ABC", "INVITE456", None],
     )
 
-class VerificationDataSchema(BaseCommonResponseSchema):
-    """
-    Данные верификации email адреса.
-
-    Содержит информацию о результате подтверждения email.
-    Возвращается после успешной верификации по токену.
-
-    Attributes:
-        user_id (int): ID пользователя
-        message (str): Сообщение об успешной верификации
-        access_token (Optional[str]): Новый JWT токен доступа
-        refresh_token (Optional[str]): Новый JWT токен для обновления
-        token_type (str): Тип токена
-        verified_at (Optional[datetime]): Время верификации
-    """
-    user_id: int = Field(
-        description="Идентификатор верифицированного пользователя",
-        example=123
-    )
-    access_token: Optional[str] = Field(
-        default=None,
-        description="Новый полный JWT токен доступа"
+    access_token: str = Field(
+        description="Ограниченный JWT токен доступа (до верификации email)",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."]
     )
 
-    refresh_token: Optional[str] = Field(
-        default=None,
-        description="Новый JWT токен для обновления"
+    refresh_token: str = Field(
+        description="JWT токен для обновления access токена",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."]
     )
 
     token_type: str = Field(
         default="bearer",
-        description="Тип токена"
+        description="Тип токена (всегда bearer)"
     )
 
+    requires_verification: bool = Field(
+        default=True,
+        description="Требуется ли верификация email для полного доступа"
+    )
+
+class VerificationDataSchema(BaseCommonResponseSchema):
+    """
+    Данные верификации email адреса.
+
+    Содержит информацию о результате подтверждения email
+    и новые полные токены доступа после верификации.
+
+    Attributes:
+        user_id: ID верифицированного пользователя
+        email: Верифицированный email адрес
+        verified_at: Время подтверждения email в UTC
+        access_token: Новый полный JWT токен доступа (без ограничений)
+        refresh_token: Новый JWT токен для обновления
+        token_type: Тип токена (всегда "bearer")
+
+    Example:
+        ```json
+        {
+            "user_id": 123,
+            "email": "john@example.com",
+            "verified_at": "2024-01-15T10:35:00Z",
+            "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "token_type": "bearer"
+        }
+        ```
+    """
+
+    user_id: int = Field(
+        description="Идентификатор верифицированного пользователя",
+        example=123
+    )
+    email: EmailStr = Field(
+        description="Верифицированный email адрес",
+        example="john@example.com"
+    )
     verified_at: datetime = Field(
         description="Время подтверждения email в формате UTC",
-        example="2024-01-15T10:35:00Z"
+        example="2024-01-15T10:35:00Z",
+    )
+    access_token: str = Field(
+        description="Новый полный JWT токен доступа (без ограничений)",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."]
+    )
+    refresh_token: str = Field(
+        description="Новый JWT токен для обновления access токена",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."]
+    )
+    token_type: str = Field(
+        default="bearer",
+        description="Тип токена (всегда bearer)"
     )
 
 
@@ -133,15 +178,48 @@ class ResendVerificationDataSchema(BaseCommonResponseSchema):
         sent_at: Время отправки письма
         expires_in: Время действия токена в секундах
     """
+
     email: EmailStr = Field(
-        description="Email адрес для повторной отправки",
-        example="john@example.com"
+        description="Email адрес для повторной отправки", example="john@example.com"
     )
     sent_at: datetime = Field(
         description="Время отправки письма в формате UTC",
-        example="2024-01-15T10:40:00Z"
+        example="2024-01-15T10:40:00Z",
     )
     expires_in: int = Field(
-        description="Время действия токена верификации в секундах",
-        example=3600
+        description="Время действия токена верификации в секундах", example=3600
+    )
+
+class VerificationStatusDataSchema(BaseCommonResponseSchema):
+    """
+    Данные статуса верификации email.
+
+    Содержит информацию о текущем статусе верификации
+    email адреса пользователя.
+
+    Attributes:
+        email: Проверяемый email адрес
+        is_verified: Статус верификации (true/false)
+        checked_at: Время проверки статуса в UTC
+
+    Example:
+        ```json
+        {
+            "email": "john@example.com",
+            "is_verified": true,
+            "checked_at": "2024-01-15T10:45:00Z"
+        }
+        ```
+    """
+    email: EmailStr = Field(
+        description="Проверяемый email адрес",
+        example="john@example.com"
+    )
+    is_verified: bool = Field(
+        description="Статус верификации email",
+        example=True
+    )
+    checked_at: datetime = Field(
+        description="Время проверки статуса в UTC",
+        example="2024-01-15T10:45:00Z"
     )

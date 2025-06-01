@@ -4,7 +4,9 @@
 Содержит классы данных, которые помещаются в поле `data` ответов API.
 Эти схемы описывают структуру полезной нагрузки ответов.
 """
+
 from datetime import datetime
+
 from pydantic import EmailStr, Field
 
 from app.schemas.v1.base import BaseCommonResponseSchema
@@ -25,21 +27,20 @@ class TokenDataSchema(BaseCommonResponseSchema):
         token_type: Тип токена (всегда Bearer для JWT)
         expires_in: Время жизни access_token в секундах
     """
+
     access_token: str = Field(
         description="JWT токен доступа для авторизации запросов",
-        example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     )
     refresh_token: str = Field(
         description="Токен для обновления access_token",
-        example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     )
     token_type: str = Field(
-        default="Bearer",
-        description="Тип токена для заголовка Authorization"
+        default="Bearer", description="Тип токена для заголовка Authorization"
     )
     expires_in: int = Field(
-        description="Время жизни access_token в секундах",
-        example=1800
+        description="Время жизни access_token в секундах", example=1800
     )
 
 
@@ -53,9 +54,10 @@ class LogoutDataSchema(BaseCommonResponseSchema):
     Attributes:
         logged_out_at: Временная метка выхода из системы в UTC
     """
+
     logged_out_at: datetime = Field(
         description="Время выхода из системы в формате UTC",
-        example="2024-01-15T10:30:00Z"
+        example="2024-01-15T10:30:00Z",
     )
 
 
@@ -70,13 +72,12 @@ class PasswordResetDataSchema(BaseCommonResponseSchema):
         email: Email адрес, на который отправлены инструкции
         expires_in: Время действия ссылки восстановления в секундах
     """
+
     email: EmailStr = Field(
-        description="Email адрес для восстановления пароля",
-        example="user@example.com"
+        description="Email адрес для восстановления пароля", example="user@example.com"
     )
     expires_in: int = Field(
-        description="Время действия ссылки восстановления в секундах",
-        example=1800
+        description="Время действия ссылки восстановления в секундах", example=1800
     )
 
 
@@ -90,7 +91,8 @@ class PasswordResetConfirmDataSchema(BaseCommonResponseSchema):
     Attributes:
         password_changed_at: Временная метка изменения пароля в UTC
     """
+
     password_changed_at: datetime = Field(
         description="Время изменения пароля в формате UTC",
-        example="2024-01-15T10:35:00Z"
+        example="2024-01-15T10:35:00Z",
     )

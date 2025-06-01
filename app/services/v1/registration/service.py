@@ -7,26 +7,27 @@
 Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
-from typing import Optional
+
 from datetime import datetime, timezone
+from typing import Optional
+from fastapi import Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.settings import settings
-from app.core.exceptions import UserNotFoundError
-from app.core.integrations.mail import AuthEmailDataManager
+
+from app.core.exceptions import UserNotFoundError, TokenExpiredError, TokenInvalidError
 from app.core.integrations.cache.auth import AuthRedisDataManager
+from app.core.integrations.mail import AuthEmailDataManager
 from app.core.security.token import TokenManager
+from app.core.security.cookies import CookieManager
+from app.core.settings import settings
 from app.models import UserModel
-from app.schemas.v1.registration.base import (
-    RegistrationDataSchema,
-    VerificationDataSchema,
-    ResendVerificationDataSchema
-)
-from app.schemas import (RegistrationRequestSchema,
+from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
                          RegistrationResponseSchema,
-                         VerificationResponseSchema,
+                         ResendVerificationDataSchema,
                          ResendVerificationResponseSchema,
-                         UserCredentialsSchema)
+                         UserCredentialsSchema, VerificationDataSchema,
+                         VerificationStatusDataSchema, VerificationResponseSchema,
+                         VerificationStatusResponseSchema)
 from app.services.v1.base import BaseService
 
 from .data_manager import RegisterDataManager
@@ -60,9 +61,11 @@ class RegisterService(BaseService):
         self.email_data_manager = AuthEmailDataManager()
         self.redis_data_manager = AuthRedisDataManager(redis) if redis else None
 
-
     async def create_user(
-        self, user_data: RegistrationRequestSchema
+        self,
+        user_data: RegistrationRequestSchema,
+        response: Optional[Response] = None,
+        use_cookies: bool = False
     ) -> RegistrationResponseSchema:
         """
         Создает нового пользователя и отправляет письмо верификации.
@@ -76,6 +79,8 @@ class RegisterService(BaseService):
 
         Args:
             user_data: Данные для регистрации пользователя
+            response: HTTP ответ для установки куков (опционально)
+            use_cookies: Использовать ли куки для хранения токенов (по умолчанию False)
 
         Returns:
             RegistrationResponseSchema: Данные созданного пользователя
@@ -89,23 +94,29 @@ class RegisterService(BaseService):
 
         # Валидируем уникальность данных
         await self.data_manager.validate_user_uniqueness(
-            username=user_data.username,
-            email=user_data.email,
-            phone=user_data.phone
+            username=user_data.username, email=user_data.email, phone=user_data.phone
         )
 
-        # Создаем пользователя через внутренний метод
+        # Создаем пользователя
         created_user = await self.data_manager.create_user_from_registration(user_data)
 
-        # Отправляем письмо верификации
-        await self._send_verification_email(created_user)
-
+        # Создаем схему пользователя для токенов
         user_schema = UserCredentialsSchema.model_validate(created_user)
+
+        # Создаем ограниченные токены (пользователь еще не верифицирован)
         access_token = TokenManager.create_limited_token(user_schema)
         refresh_token = TokenManager.create_refresh_token(created_user.id)
 
         # Сохраняем токены в Redis
         await self._save_tokens_to_redis(user_schema, access_token, refresh_token)
+
+        # Опционально устанавливаем куки
+        if response and use_cookies:
+            CookieManager.set_auth_cookies(response, access_token, refresh_token)
+            self.logger.debug("Установлены куки с ограниченными токенами")
+
+        # Отправляем письмо верификации
+        await self._send_verification_email(created_user)
 
         # Формируем данные ответа
         registration_data = RegistrationDataSchema(
@@ -119,10 +130,14 @@ class RegisterService(BaseService):
             referral_code=created_user.referral_code,
             access_token=access_token,
             refresh_token=refresh_token,
-            requires_verification=True
+            token_type=settings.TOKEN_TYPE,
+            requires_verification=True,
         )
 
-        self.logger.info("Пользователь зарегистрирован с ограниченными токенами: ID=%s", created_user.id)
+        self.logger.info(
+            "Пользователь зарегистрирован с ограниченными токенами: ID=%s",
+            created_user.id,
+        )
 
         return RegistrationResponseSchema(
             message="Регистрация завершена. Подтвердите email для полного доступа.",
@@ -130,10 +145,7 @@ class RegisterService(BaseService):
         )
 
     async def _save_tokens_to_redis(
-        self,
-        user_schema: UserCredentialsSchema,
-        access_token: str,
-        refresh_token: str
+        self, user_schema: UserCredentialsSchema, access_token: str, refresh_token: str
     ) -> None:
         """
         Сохраняет токены в Redis если доступен.
@@ -151,84 +163,130 @@ class RegisterService(BaseService):
             await self.redis_data_manager.save_token(user_schema, access_token)
 
             # Сохраняем refresh токен
-            await self.redis_data_manager.save_refresh_token(user_schema.id, refresh_token)
+            await self.redis_data_manager.save_refresh_token(
+                user_schema.id, refresh_token
+            )
 
             self.logger.info(
-                "Токены сохранены в Redis",
-                extra={"user_id": user_schema.id}
+                "Токены сохранены в Redis", extra={"user_id": user_schema.id}
             )
         except Exception as e:
             self.logger.warning(
-                "Не удалось сохранить токены в Redis: %s",
+                "Ошибка сохранения токенов в Redis: %s",
                 e,
-                extra={"user_id": user_schema.id}
+                extra={"user_id": user_schema.id},
             )
 
-    async def verify_email(self, token: str) -> VerificationResponseSchema:
+    async def verify_email(
+        self,
+        token: str,
+        response: Optional[Response] = None,
+        use_cookies: bool = False
+    ) -> VerificationResponseSchema:
         """
-        Подтверждает email пользователя по токену.
+        Подтверждает email пользователя и выдает полные токены.
+
+        Процесс верификации:
+        1. Валидация и декодирование токена
+        2. Проверка существования пользователя
+        3. Обновление статуса is_verified
+        4. Выдача полных токенов доступа
+        5. Отправка письма об успешной регистрации
 
         Args:
-            token: Токен верификации
+            token: Токен верификации из письма
+            response: HTTP ответ для обновления куков (опционально)
+            use_cookies: Обновить ли куки с полными токенами (по умолчанию False)
 
         Returns:
-            VerificationResponseSchema: Результат верификации
+            VerificationResponseSchema: Результат верификации с полными токенами
+
+        Raises:
+            TokenInvalidError: Если токен недействителен
+            TokenExpiredError: Если токен истек
+            UserNotFoundError: Если пользователь не найден
         """
         self.logger.info("Попытка верификации email по токену")
 
+        try:
+            # Декодируем и валидируем токен
+            payload = TokenManager.verify_token(token)
+            user_id = TokenManager.validate_verification_token(payload)
 
-        # Декодируем и валидируем токен
-        payload = TokenManager.verify_token(token)
-        user_id = TokenManager.validate_verification_token(payload)
+            # Получаем пользователя
+            user = await self.data_manager.get_item_by_field("id", user_id)
+            if not user:
+                self.logger.warning("Пользователь не найден", extra={"user_id": user_id})
+                raise UserNotFoundError(field="id", value=user_id)
 
-        # Получаем пользователя
-        user = await self.data_manager.get_item_by_field("id", user_id)
-        if not user:
-            self.logger.warning("Пользователь не найден", extra={"user_id": user_id})
-            raise UserNotFoundError(field="id", value=user_id)
+            # Проверяем, не верифицирован ли уже
+            if user.is_verified:
+                # Если уже верифицирован, все равно возвращаем полные токены
+                user_schema = UserCredentialsSchema.model_validate(user)
+                access_token = TokenManager.create_full_token(user_schema)
+                refresh_token = TokenManager.create_refresh_token(user_schema.id)
 
-        # Проверяем, не верифицирован ли уже
-        if user.is_verified:
+                await self._save_tokens_to_redis(user_schema, access_token, refresh_token)
+
+                # Обновляем куки если нужно
+                if response and use_cookies:
+                    CookieManager.set_auth_cookies(response, access_token, refresh_token)
+
+                verification_data = VerificationDataSchema(
+                    user_id=user_id,
+                    email=user_schema.email,
+                    verified_at=datetime.now(timezone.utc),
+                    access_token=access_token,
+                    refresh_token=refresh_token,
+                    token_type=settings.TOKEN_TYPE
+                )
+
+                return VerificationResponseSchema(
+                    message="Email уже был подтвержден ранее", data=verification_data
+                )
+
+            # Подтверждаем email
+            await self.data_manager.update_items(user_id, {"is_verified": True})
+
+            updated_user = await self.data_manager.get_item_by_field("id", user_id)
+            user_schema = UserCredentialsSchema.model_validate(updated_user)
+
+            new_access_token = TokenManager.create_full_token(user_schema)
+            new_refresh_token = TokenManager.create_refresh_token(user_id)
+
+            # Сохраняем новые токены в Redis
+            await self._save_tokens_to_redis(
+                user_schema, new_access_token, new_refresh_token
+            )
+
+            # Обновляем куки с полными токенами если нужно
+            if response and use_cookies:
+                CookieManager.set_auth_cookies(response, new_access_token, new_refresh_token)
+                self.logger.debug("Обновлены куки с полными токенами")
+
+            # Отправляем письмо об успешной регистрации
+            await self._send_registration_success_email(user)
+
+            self.logger.info(
+                "Email верифицирован, выданы полные токены", extra={"user_id": user_id}
+            )
+
             verification_data = VerificationDataSchema(
                 user_id=user_id,
-                verified_at=user.updated_at or user.created_at,  # Используем время обновления или создания
                 email=user.email,
+                verified_at=datetime.now(timezone.utc),
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type=settings.TOKEN_TYPE
             )
+
             return VerificationResponseSchema(
-                message="Email уже был подтвержден ранее",
-                data=verification_data
+                message="Email успешно подтвержден. Теперь вы можете войти в систему",
+                data=verification_data,
             )
-
-        # Подтверждаем email
-        await self.data_manager.update_items(user_id, {"is_verified": True})
-
-        updated_user = await self.data_manager.get_item_by_field("id", user_id)
-        user_schema = UserCredentialsSchema.model_validate(updated_user)
-
-        new_access_token = TokenManager.create_full_token(user_schema)
-        new_refresh_token = TokenManager.create_refresh_token(user_id)
-
-        # Сохраняем новые токены в Redis
-        await self._save_tokens_to_redis(user_schema, new_access_token, new_refresh_token)
-
-        # Отправляем письмо об успешной регистрации
-        await self._send_registration_success_email(user)
-
-        self.logger.info("Email верифицирован, выданы полные токены", extra={"user_id": user_id})
-
-        verification_data = VerificationDataSchema(
-            user_id=user_id,
-            verified_at=datetime.now(timezone.utc),
-            email=user.email,
-            access_token=new_access_token,
-            refresh_token=new_refresh_token,
-        )
-
-        return VerificationResponseSchema(
-            message="Email успешно подтвержден. Теперь вы можете войти в систему",
-            data=verification_data,
-        )
-
+        except (TokenExpiredError, TokenInvalidError) as e:
+            self.logger.error("Ошибка верификации токена: %s", e)
+            raise
 
     async def resend_verification_email(self, email: str) -> dict:
         """
@@ -253,11 +311,10 @@ class RegisterService(BaseService):
             verification_data = VerificationDataSchema(
                 user_id=user_model.id,
                 verified_at=user_model.updated_at or user_model.created_at,
-                email=user_model.email
+                email=user_model.email,
             )
             return VerificationResponseSchema(
-                message="Email уже подтвержден",
-                data=verification_data
+                message="Email уже подтвержден", data=verification_data
             )
 
         # Отправка письма
@@ -266,15 +323,14 @@ class RegisterService(BaseService):
         resend_data = ResendVerificationDataSchema(
             email=email,
             sent_at=datetime.now(timezone.utc),
-            expires_in=settings.VERIFICATION_TOKEN_EXPIRE_MINUTES * 60
+            expires_in=settings.VERIFICATION_TOKEN_EXPIRE_MINUTES * 60,
         )
 
         return ResendVerificationResponseSchema(
-            message="Письмо верификации отправлено повторно",
-            data=resend_data
+            message="Письмо верификации отправлено повторно", data=resend_data
         )
 
-    async def check_verification_status(self, email: str) -> bool:
+    async def check_verification_status(self, email: str) -> VerificationStatusResponseSchema:
         """
         Проверяет статус верификации email пользователя
 
@@ -292,7 +348,17 @@ class RegisterService(BaseService):
             self.logger.error("Пользователь с email '%s' не найден", email)
             raise UserNotFoundError(field="email", value=email)
 
-        return user.is_verified
+
+        status_data = VerificationStatusDataSchema(
+            email=email,
+            is_verified=user.is_verified,
+            checked_at=datetime.now(timezone.utc)
+        )
+
+        return VerificationStatusResponseSchema(
+            message="Email подтвержден" if user.is_verified else "Email не подтвержден",
+            data=status_data
+        )
 
     def _validate_verification_token(self, token: str) -> int:
         """
@@ -331,15 +397,15 @@ class RegisterService(BaseService):
             )
             self.logger.info(
                 "Письмо верификации отправлено",
-                extra={"user_id": user.id, "email": user.email}
+                extra={"user_id": user.id, "email": user.email},
             )
         except Exception as e:
             # Не прерываем регистрацию, если письмо не отправилось
             self.logger.error(
-            "Ошибка при отправке письма верификации: %s",
-            e,
-            extra={"user_id": user.id, "email": user.email}
-        )
+                "Ошибка при отправке письма верификации: %s",
+                e,
+                extra={"user_id": user.id, "email": user.email},
+            )
 
     async def _send_registration_success_email(self, user_schema) -> None:
         """
@@ -350,16 +416,15 @@ class RegisterService(BaseService):
         """
         try:
             await self.email_data_manager.send_registration_success_email(
-                to_email=user_schema.email,
-                user_name=user_schema.username
+                to_email=user_schema.email, user_name=user_schema.username
             )
             self.logger.info(
                 "Письмо об успешной регистрации отправлено",
-                extra={"user_id": user_schema.id, "email": user_schema.email}
+                extra={"user_id": user_schema.id, "email": user_schema.email},
             )
         except Exception as e:
             self.logger.error(
                 "Ошибка отправки письма об успешной регистрации: %s",
                 e,
-                extra={"user_id": user_schema.id, "email": user_schema.email}
+                extra={"user_id": user_schema.id, "email": user_schema.email},
             )

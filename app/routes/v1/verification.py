@@ -12,23 +12,23 @@ Routes:
 Classes:
     VerificationRouter: Класс для настройки маршрутов верификации
 """
+
 from typing import Optional
-from fastapi import Depends
+
+from fastapi import Depends, Response, Query, Cookie
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.connections.cache import get_redis_client
 from app.core.connections.database import get_db_session
 from app.routes.base import BaseRouter
-from app.schemas import (
-    VerificationResponseSchema,
-    ResendVerificationRequestSchema,
-    ResendVerificationResponseSchema,
-    VerificationStatusResponseSchema,
-    UserNotFoundResponseSchema,
-    TokenExpiredResponseSchema,
-    TokenInvalidResponseSchema
-)
-
+from app.schemas import (ResendVerificationRequestSchema,
+                         ResendVerificationResponseSchema,
+                         TokenExpiredResponseSchema,
+                         TokenInvalidResponseSchema,
+                         UserNotFoundResponseSchema,
+                         VerificationResponseSchema,
+                         VerificationStatusResponseSchema)
 from app.services.v1.registration.service import RegisterService
 
 
@@ -85,37 +85,34 @@ class VerificationRouter(BaseRouter):
         )
         async def verify_email(
             token: str,
+            response: Response,
+            use_cookies: bool = Query(
+                False,
+                description="Обновить куки с полными токенами"
+            ),
             session: AsyncSession = Depends(get_db_session),
             redis: Optional[Redis] = Depends(get_redis_client),
         ) -> VerificationResponseSchema:
             """
-            ## ✉️ Подтверждение email адреса
+            ## ✅ Подтверждение email адреса
 
-            Подтверждает email адрес пользователя по токену из письма верификации.
-            После подтверждения пользователь получает полный доступ к системе.
+            Подтверждает email пользователя по токену из письма и выдает полные токены доступа.
 
             ### Параметры:
             * **token**: Токен верификации из письма
+            * **use_cookies**: Обновить куки с полными токенами
 
             ### Returns:
-            * **success**: Статус операции
-            * **message**: Сообщение о результате
-            * **user_id**: ID пользователя
+            * Результат верификации с полными токенами доступа
 
             ### Процесс верификации:
-            1. Декодирование и валидация токена
-            2. Проверка срока действия токена
-            3. Поиск пользователя в базе данных
-            4. Обновление статуса is_verified=true
-            5. Отправка письма об успешной регистрации
-
-            ### Примечания:
-            * Токен одноразовый и имеет ограниченный срок действия
-            * После подтверждения пользователь может войти в систему (точнее производить покупки и прочие действия на сайте)
-            * Если email уже подтвержден, возвращается соответствующее сообщение
-            * При истечении токена необходимо запросить повторную отправку
+            1. Валидация токена верификации
+            2. Обновление статуса is_verified=true
+            3. Выдача полных токенов доступа
+            4. Отправка письма об успешной регистрации
+            5. Опциональное обновление куков
             """
-            return await RegisterService(session, redis).verify_email(token)
+            return await RegisterService(session, redis).verify_email(token, response, use_cookies)
 
         @self.router.post(
             path="/resend",
@@ -148,18 +145,14 @@ class VerificationRouter(BaseRouter):
             * **email**: Email адрес пользователя для повторной отправки
 
             ### Returns:
-            * **message**: Сообщение о статусе отправки
-            * **email**: Email, на который отправлено письмо
-
-            ### Примечания:
-            * Если email уже подтвержден, возвращается соответствующее сообщение
-            * Ограничение на частоту отправки писем (защита от спама)
-            * Новый токен верификации генерируется для каждой отправки
+            * Статус отправки письма
             """
-            result = await RegisterService(session, redis).resend_verification_email(request.email)
+            result = await RegisterService(session, redis).resend_verification_email(
+                request.email
+            )
             return ResendVerificationResponseSchema(
                 email=request.email,
-                message=result.get("message", "Письмо верификации отправлено")
+                message=result.get("message", "Письмо верификации отправлено"),
             )
 
         @self.router.get(
@@ -195,16 +188,10 @@ class VerificationRouter(BaseRouter):
             ### Returns:
             * **email**: Проверяемый email адрес
             * **is_verified**: Статус верификации (true/false)
-            * **registration_date**: Дата регистрации пользователя
-            * **verification_date**: Дата подтверждения email (если подтвержден)
 
             ### Использование:
             * Проверка перед повторной отправкой письма
             * Отображение статуса в интерфейсе пользователя
             * Валидация для операций, требующих подтвержденный email
             """
-            is_verified = await RegisterService(session, redis).check_verification_status(email)
-            return VerificationStatusResponseSchema(
-                email=email,
-                is_verified=is_verified
-            )
+            return await RegisterService(session, redis).check_verification_status(email)

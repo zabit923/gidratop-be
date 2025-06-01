@@ -112,13 +112,9 @@ class UserModel(BaseModel):
         Numeric(precision=10, scale=2), default=0
     )
     last_order_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
+        DateTime(timezone=True), nullable=True
     )
-    last_login: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True
-    )
+    last_login: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     registration_source: Mapped[str] = mapped_column(nullable=True)
 
     # Связи

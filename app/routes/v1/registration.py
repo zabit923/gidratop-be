@@ -9,20 +9,18 @@ Routes:
 Classes:
     RegisterRouter: Класс для настройки маршрутов регистрации
 """
+
 from typing import Optional
-from fastapi import Depends
+
+from fastapi import Depends, Response, Query
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.connections.cache import get_redis_client
 from app.core.connections.database import get_db_session
 from app.routes.base import BaseRouter
-from app.schemas import (
-    RegistrationRequestSchema,
-    RegistrationResponseSchema,
-    UserCreationResponseSchema,
-    UserExistsResponseSchema,
-)
-
+from app.schemas import (RegistrationRequestSchema, RegistrationResponseSchema,
+                         UserCreationResponseSchema, UserExistsResponseSchema)
 from app.services.v1.registration.service import RegisterService
 
 
@@ -36,6 +34,7 @@ class RegisterRouter(BaseRouter):
     Attributes:
         router (APIRouter): FastAPI роутер с настроенными маршрутами
     """
+
     def __init__(self):
         """
         Инициализирует роутер регистрации.
@@ -49,6 +48,7 @@ class RegisterRouter(BaseRouter):
         Определяет endpoints для регистрации пользователей
         и подтверждения их email адресов.
         """
+
         @self.router.post(
             path="",
             response_model=RegistrationResponseSchema,
@@ -71,6 +71,11 @@ class RegisterRouter(BaseRouter):
         )
         async def registration_user(
             new_user: RegistrationRequestSchema,
+            response: Response,
+            use_cookies: bool = Query(
+                False,
+                description="Использовать куки для хранения токенов"
+            ),
             session: AsyncSession = Depends(get_db_session),
             redis: Optional[Redis] = Depends(get_redis_client),
         ) -> RegistrationResponseSchema:
@@ -85,30 +90,27 @@ class RegisterRouter(BaseRouter):
             * **email**: Email адрес пользователя (должен быть уникальным)
             * **password**: Пароль (минимум 8 символов, должен содержать буквы и цифры)
             * **phone**: Номер телефона в формате +7 (XXX) XXX-XX-XX (опционально)
+            * **use_cookies**: Использовать куки для хранения токенов (по умолчанию false)
 
             ### Returns:
             * **success**: Статус успешной регистрации (true)
             * **message**: Сообщение о результате регистрации
-            * **item**: Информация о созданном пользователе:
-                * **user_id**: Уникальный идентификатор созданного пользователя
-                * **username**: Имя пользователя
-                * **email**: Email адрес
-                * **role**: Роль пользователя (по умолчанию "user")
-                * **is_active**: Статус активности пользователя (true для новых пользователей)
-                * **is_verified**: Статус подтверждения email (false для новых пользователей)
-                * **created_at**: Дата и время создания пользователя
-                * **referral_code**: Реферальный код пользователя
+            * **data**: Информация о созданном пользователе и токены доступа
 
             ### Процесс регистрации:
             1. Валидация входных данных
             2. Проверка уникальности email, username и телефона
             3. Создание пользователя в базе данных
-            4. Генерация токена верификации
+            4. Генерация ограниченных токенов доступа
             5. Отправка письма с ссылкой подтверждения
+            6. Опциональная установка куков с токенами
 
             ### Примечания:
             * Пользователь создается с is_verified=false
-            * Для полного доступа необходимо подтвердить email
+            * Выдаются ограниченные токены до подтверждения email
             * Письмо верификации действительно 24 часа
+            * При use_cookies=true токены сохраняются в HttpOnly куки
             """
-            return await RegisterService(session, redis).create_user(new_user)
+            return await RegisterService(session, redis).create_user(
+                new_user, response, use_cookies
+            )
