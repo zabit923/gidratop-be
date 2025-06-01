@@ -30,12 +30,40 @@ cp .env.example .env.dev
 
 Отредактируйте файл .env.dev, заполнив следующие обязательные параметры:
 
+### Настройки JWT и безопасности
+- `TOKEN_SECRET_KEY` - секретный ключ для подписи JWT токенов (обязательно!)
+- `COOKIE_DOMAIN` - домен для cookies (localhost для разработки)
+
 ### Настройки базы данных PostgreSQL
 - `POSTGRES_USER` - имя пользователя PostgreSQL
 - `POSTGRES_PASSWORD` - пароль пользователя PostgreSQL
 - `POSTGRES_HOST` - хост базы данных (обычно localhost для разработки)
 - `POSTGRES_PORT` - порт PostgreSQL (по умолчанию 5432)
 - `POSTGRES_DB` - имя базы данных
+
+### Настройки Redis
+- `REDIS_PASSWORD` - пароль для Redis
+- `REDIS_PORT` - порт Redis (по умолчанию 6379)
+
+### Настройки RabbitMQ
+- `RABBITMQ_USER` - имя пользователя RabbitMQ
+- `RABBITMQ_PASS` - пароль пользователя RabbitMQ
+- `RABBITMQ_HOST` - хост RabbitMQ
+- `RABBITMQ_PORT` - порт RabbitMQ (по умолчанию 5672)
+- `RABBITMQ_EXCHANGE` - имя exchange для сообщений
+
+### Настройки SMTP (для отправки email)
+- `SMTP_USERNAME` - имя пользователя SMTP
+- `SMTP_PASSWORD` - пароль SMTP
+- `SMTP_PORT` - порт SMTP (по умолчанию 587)
+
+### Настройки CORS
+- `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["*"])
+
+### Настройки логирования
+- `LOGGING__LOG_FORMAT` - формат логов (pretty/json)
+- `LOGGING__LOG_FILE` - путь к файлу логов
+- `LOGGING__LEVEL` - уровень логирования (DEBUG/INFO/WARNING/ERROR)
 
 > [!NOTE]
 > Порт 5432 может быть занят, поэтому его можно изменить на любой другой свободный порт (например, 5433).
@@ -45,19 +73,49 @@ cp .env.example .env.dev
 - `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["http://localhost:3000","http://localhost:5173"])
 
 ### Пример минимальной конфигурации для локальной разработки
-```bash
+# Настройки логирования
+LOGGING__LOG_FORMAT=pretty
+LOGGING__LOG_FILE=./logs/app.log
+LOGGING__LEVEL=DEBUG
+
+# Настройки JWT (ОБЯЗАТЕЛЬНО!)
+TOKEN_SECRET_KEY=your_very_secure_secret_key_here
+COOKIE_DOMAIN=localhost
+
+# SMTP
+SMTP_PORT=587
+SMTP_USERNAME=admin
+SMTP_PASSWORD=admin
+
+# Настройки Redis
+REDIS_PORT=6379
+REDIS_PASSWORD=default
+
+# Настройки базы данных
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+POSTGRES_PORT=5433
 POSTGRES_DB=gidrator_db
 
-ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+# RabbitMQ
+RABBITMQ_USER=guest
+RABBITMQ_PASS=guest
+RABBITMQ_PORT=5672
+RABBITMQ_HOST=localhost
+RABBITMQ_EXCHANGE=gidrator
+
+# Настройки CORS
+ALLOW_ORIGINS=["*"]
+ALLOW_CREDENTIALS=true
+ALLOW_METHODS=["*"]
+ALLOW_HEADERS=["*"]
 ```
+
 > [!IMPORTANT]
-> Никогда не коммитьте файлы .env.dev или другие файлы с реальными учетными данными в репозиторий!
->
-> Убедитесь, что они добавлены в .gitignore.
+> - Никогда не коммитьте файлы .env.dev или другие файлы с реальными учетными данными в репозиторий!
+> - Убедитесь, что они добавлены в .gitignore.
+> - Обязательно замените `TOKEN_SECRET_KEY` на уникальный секретный ключ!
 
 ## Первый запуск
 
