@@ -113,6 +113,8 @@ class AuthRouter(BaseRouter):
             * **password**: Пароль пользователя
 
             ### Returns:
+            * **success**: Булево значение успешности аутентификации
+            * **message**: Сообщение об успешной аутентификации
             * **access_token**: JWT токен доступа (срок действия: 15 минут)
             * **refresh_token**: Refresh токен для обновления (срок действия: 7 дней)
             * **token_type**: Тип токена (Bearer)
@@ -167,6 +169,8 @@ class AuthRouter(BaseRouter):
             * **refresh_token**: Refresh токен, полученный при аутентификации
 
             ### Returns:
+            * **success**: Булево значение успешности обновления токена
+            * **message**: Сообщение об успешном обновлении токена
             * **access_token**: Новый JWT токен доступа
             * **refresh_token**: Новый refresh токен (ротация токенов)
             * **token_type**: Тип токена (Bearer)
@@ -218,6 +222,7 @@ class AuthRouter(BaseRouter):
             * **authorization**: Bearer токен для идентификации сессии
 
             ### Returns:
+            * **success**: Булево значение успешности выхода
             * **message**: Сообщение о успешном выходе
             * **logged_out_at**: Время выхода из системы
 
@@ -232,7 +237,7 @@ class AuthRouter(BaseRouter):
             path="/forgot-password",
             response_model=PasswordResetResponseSchema,
             summary="Запрос восстановления пароля",
-            description="Отправка ссылки для сброса пароля на email",
+            # description="Отправка ссылки для сброса пароля на email",
             responses={
                 200: {
                     "model": PasswordResetResponseSchema,
@@ -260,6 +265,7 @@ class AuthRouter(BaseRouter):
             * **email**: Email адрес для отправки ссылки восстановления
 
             ### Returns:
+            * **success**: Булево значение успешности отправки ссылки
             * **message**: Сообщение о отправке ссылки
             * **email**: Email, на который отправлена ссылка
             * **expires_in**: Время действия ссылки в секундах
@@ -277,7 +283,7 @@ class AuthRouter(BaseRouter):
             path="/reset-password",
             response_model=PasswordResetConfirmResponseSchema,
             summary="Подтверждение сброса пароля",
-            description="Установка нового пароля по токену восстановления",
+            # description="Установка нового пароля по токену восстановления",
             responses={
                 200: {
                     "model": PasswordResetConfirmResponseSchema,
@@ -314,6 +320,7 @@ class AuthRouter(BaseRouter):
             * **confirm_password**: Подтверждение нового пароля
 
             ### Returns:
+            * **success**: Булево значение успешности изменения пароля
             * **message**: Сообщение о успешном изменении пароля
             * **password_changed_at**: Время изменения пароля
 

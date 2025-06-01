@@ -8,15 +8,21 @@ Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
 from typing import Optional
+from datetime import datetime, timezone
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.core.settings import settings
 from app.core.exceptions import UserNotFoundError
 from app.core.integrations.mail import AuthEmailDataManager
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.security.token import TokenManager
 from app.models import UserModel
-from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
+from app.schemas.v1.registration.base import (
+    RegistrationDataSchema,
+    VerificationDataSchema,
+    ResendVerificationDataSchema
+)
+from app.schemas import (RegistrationRequestSchema,
                          RegistrationResponseSchema,
                          VerificationResponseSchema,
                          ResendVerificationResponseSchema,
@@ -102,16 +108,25 @@ class RegisterService(BaseService):
         await self._save_tokens_to_redis(user_schema, access_token, refresh_token)
 
         # Формируем данные ответа
-        response_data = self._build_registration_response(created_user)
+        registration_data = RegistrationDataSchema(
+            user_id=created_user.id,
+            username=created_user.username,
+            email=created_user.email,
+            role=created_user.role.value,
+            is_active=created_user.is_active,
+            is_verified=created_user.is_verified,
+            created_at=created_user.created_at,
+            referral_code=created_user.referral_code,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            requires_verification=True
+        )
 
         self.logger.info("Пользователь зарегистрирован с ограниченными токенами: ID=%s", created_user.id)
 
         return RegistrationResponseSchema(
             message="Регистрация завершена. Подтвердите email для полного доступа.",
-            item=response_data,
-            access_token=access_token,
-            refresh_token=refresh_token,
-            requires_verification=True
+            data=registration_data,
         )
 
     async def _save_tokens_to_redis(
@@ -174,10 +189,14 @@ class RegisterService(BaseService):
 
         # Проверяем, не верифицирован ли уже
         if user.is_verified:
-            return VerificationResponseSchema(
+            verification_data = VerificationDataSchema(
                 user_id=user_id,
-                success=True,
-                message="Email уже был подтвержден ранее.",
+                verified_at=user.updated_at or user.created_at,  # Используем время обновления или создания
+                email=user.email,
+            )
+            return VerificationResponseSchema(
+                message="Email уже был подтвержден ранее",
+                data=verification_data
             )
 
         # Подтверждаем email
@@ -197,12 +216,19 @@ class RegisterService(BaseService):
 
         self.logger.info("Email верифицирован, выданы полные токены", extra={"user_id": user_id})
 
-        return VerificationResponseSchema(
+        verification_data = VerificationDataSchema(
             user_id=user_id,
-            message="Email успешно подтвержден. Получен полный доступ к системе.",
+            verified_at=datetime.now(timezone.utc),
+            email=user.email,
             access_token=new_access_token,
             refresh_token=new_refresh_token,
         )
+
+        return VerificationResponseSchema(
+            message="Email успешно подтвержден. Теперь вы можете войти в систему",
+            data=verification_data,
+        )
+
 
     async def resend_verification_email(self, email: str) -> dict:
         """
@@ -224,15 +250,28 @@ class RegisterService(BaseService):
 
         # Проверка статуса
         if user_model.is_verified:
-            return ResendVerificationResponseSchema(
-                message="Email уже подтвержден"
+            verification_data = VerificationDataSchema(
+                user_id=user_model.id,
+                verified_at=user_model.updated_at or user_model.created_at,
+                email=user_model.email
+            )
+            return VerificationResponseSchema(
+                message="Email уже подтвержден",
+                data=verification_data
             )
 
         # Отправка письма
         await self._send_verification_email(user_model)
 
+        resend_data = ResendVerificationDataSchema(
+            email=email,
+            sent_at=datetime.now(timezone.utc),
+            expires_in=settings.VERIFICATION_TOKEN_EXPIRE_MINUTES * 60
+        )
+
         return ResendVerificationResponseSchema(
-            message="Письмо с токеном верификации отправлено повторно"
+            message="Письмо верификации отправлено повторно",
+            data=resend_data
         )
 
     async def check_verification_status(self, email: str) -> bool:
@@ -324,24 +363,3 @@ class RegisterService(BaseService):
                 e,
                 extra={"user_id": user_schema.id, "email": user_schema.email}
             )
-
-    def _build_registration_response(self, user_model: UserModel) -> RegistrationDataSchema:
-        """
-        Формирует данные ответа регистрации.
-
-        Args:
-            user_model: Модель пользователя
-
-        Returns:
-            RegistrationDataSchema: Данные ответа регистрации
-        """
-        return RegistrationDataSchema(
-            user_id=user_model.id,
-            username=user_model.username,
-            email=user_model.email,
-            role=user_model.role.value,
-            is_active=user_model.is_active,
-            is_verified=user_model.is_verified,
-            created_at=user_model.created_at,
-            referral_code=user_model.referral_code,
-        )

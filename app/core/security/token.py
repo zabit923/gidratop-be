@@ -169,9 +169,9 @@ class TokenManager:
             int: Количество секунд до истечения токена
 
         Example:
-            15 минут * 60 = 900 секунд
+            30 минут * 60 = 1800 секунд
         """
-        return settings.TOKEN_EXPIRE_MINUTES * 60
+        return settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
     @staticmethod
     def validate_payload(payload: dict) -> str:
@@ -309,7 +309,7 @@ class TokenManager:
             "type": "password_reset",
             "expires_at": (
                 int(datetime.now(timezone.utc).timestamp())
-                + 1800  # 30 минут (в секундах)
+                + settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES * 60
             ),
         }
         return TokenManager.generate_token(payload)
@@ -473,6 +473,7 @@ class TokenManager:
     @staticmethod
     def is_token_limited(payload: dict) -> bool:
         """
+        !Не использован в коде!
         Проверяет, является ли токен ограниченным.
 
         Args:
@@ -493,6 +494,7 @@ class TokenManager:
     @staticmethod
     def get_user_id_from_payload(payload: dict) -> int:
         """
+        !Не использован в коде!
         Извлекает ID пользователя из payload токена.
 
         Args:
@@ -510,8 +512,9 @@ class TokenManager:
         return int(user_id)
 
     @staticmethod
-    def upgrade_token_to_full(limited_token: str, user_schema: Any) -> str:
+    def upgrade_token_to_full(user_schema: Any) -> str:
         """
+        !Не использован в коде!
         Обновляет ограниченный токен до полного после верификации.
 
         Args:
@@ -527,13 +530,9 @@ class TokenManager:
         Example:
             ```python
             # После верификации email
-            new_token = TokenManager.upgrade_token_to_full(old_token, verified_user)
+            new_token = TokenManager.upgrade_token_to_full(verified_user)
             ```
         """
-        # Проверяем валидность старого токена
-        old_payload = TokenManager.decode_token(limited_token)
-
-        # Создаем новый полный токен
         new_token = TokenManager.create_full_token(user_schema)
 
         logger.info(

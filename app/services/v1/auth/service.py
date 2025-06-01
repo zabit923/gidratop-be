@@ -18,6 +18,13 @@ from app.core.integrations.mail import AuthEmailDataManager
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.security.password import PasswordHasher
 from app.core.security.token import TokenManager
+from app.core.settings import settings
+from app.schemas.v1.auth.base import (
+    TokenDataSchema,
+    LogoutDataSchema,
+    PasswordResetDataSchema,
+    PasswordResetConfirmDataSchema
+)
 from app.schemas.v1.auth import (AuthSchema, LogoutResponseSchema,
                                  PasswordResetConfirmResponseSchema,
                                  PasswordResetConfirmSchema,
@@ -157,7 +164,9 @@ class AuthService(BaseService):
         refresh_token = await self.create_refresh_token(user_schema.id)
 
         return TokenResponseSchema(
-            access_token=access_token, refresh_token=refresh_token
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
 
     async def create_token(self, user_schema: UserCredentialsSchema) -> str:
@@ -270,7 +279,10 @@ class AuthService(BaseService):
             )
 
             return TokenResponseSchema(
-                access_token=access_token, refresh_token=new_refresh_token
+                message="Токен успешно обновлен",
+                access_token=access_token,
+                refresh_token=new_refresh_token,
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
             )
 
         except (TokenExpiredError, TokenInvalidError) as e:
@@ -326,7 +338,15 @@ class AuthService(BaseService):
 
             # Удаляем токен из Redis
             await self.redis_data_manager.remove_token(token)
-            return LogoutResponseSchema()
+
+            logout_data = LogoutDataSchema(
+                logged_out_at=datetime.now(timezone.utc)
+            )
+
+            return LogoutResponseSchema(
+                message="Выход выполнен успешно",
+                data=logout_data
+            )
 
         except (TokenExpiredError, TokenInvalidError) as e:
             # Для этих ошибок мы не можем продолжить процесс выхода
@@ -378,9 +398,14 @@ class AuthService(BaseService):
                 extra={"user_id": user.id, "email": user.email},
             )
 
+            reset_data = PasswordResetDataSchema(
+                email=email,
+                expires_in=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+            )
+
             return PasswordResetResponseSchema(
-                success=True,
                 message="Инструкции по сбросу пароля отправлены на ваш email",
+                data=reset_data
             )
 
         except Exception as e:
@@ -434,8 +459,14 @@ class AuthService(BaseService):
             )
 
             self.logger.info("Пароль успешно изменен", extra={"user_id": user_id})
+
+            confirm_data = PasswordResetConfirmDataSchema(
+                password_changed_at=datetime.now(timezone.utc)
+            )
+
             return PasswordResetConfirmResponseSchema(
-                success=True, message="Пароль успешно изменен"
+                message="Пароль успешно изменен",
+                data=confirm_data
             )
 
         except (TokenExpiredError, TokenInvalidError) as e:

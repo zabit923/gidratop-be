@@ -1,95 +1,18 @@
 """
 Схемы ответов для регистрации пользователей.
 
-Модуль содержит Pydantic схемы для структурирования ответов API при регистрации
-новых пользователей. Обеспечивает единообразный формат возвращаемых данных
-и соответствует архитектуре базовых схем приложения.
-
-Схемы:
-    - RegistrationDataSchema: Данные пользователя в ответе регистрации
-    - RegistrationResponseSchema: Полная схема ответа API при регистрации
+Содержит Pydantic схемы для исходящих данных endpoints регистрации.
+Все схемы следуют единому формату: {success, message, data}.
 """
-from typing import Optional
 
-from datetime import datetime
+from pydantic import EmailStr
 
-from pydantic import EmailStr, Field
-
-from app.schemas.v1.base import (BaseCommonResponseSchema, BaseResponseSchema,
-                                 ItemResponseSchema)
-
-
-class RegistrationDataSchema(BaseCommonResponseSchema):
-    """
-    Схема данных пользователя при успешной регистрации.
-
-    Содержит основную информацию о зарегистрированном пользователе,
-    которая безопасна для передачи клиенту. Исключает конфиденциальные
-    данные такие как хешированный пароль.
-
-    Attributes:
-        user_id (int): Уникальный идентификатор пользователя в системе
-        username (str): Имя пользователя для входа в систему
-        email (EmailStr): Email адрес пользователя
-        role (str): Роль пользователя в системе (по умолчанию "user")
-        is_active (bool): Статус активности аккаунта
-        is_verified (bool): Статус верификации email/телефона
-        created_at (datetime): Дата и время создания аккаунта
-        referral_code (str | None): Реферальный код пользователя (если есть)
-
-    Example:
-        ```python
-        {
-            "user_id": 123,
-            "username": "john_doe",
-            "email": "john@example.com",
-            "role": "user",
-            "is_active": True,
-            "is_verified": False,
-            "created_at": "2024-01-15T10:30:00Z",
-            "referral_code": "REF123ABC"
-        }
-        ```
-    """
-
-    user_id: int = Field(
-        description="Уникальный идентификатор пользователя", examples=[123, 456, 789]
-    )
-
-    username: str = Field(
-        description="Имя пользователя для входа в систему",
-        examples=["john_doe", "user123", "admin"],
-    )
-
-    email: EmailStr = Field(
-        description="Email адрес пользователя",
-        examples=["user@example.com", "john.doe@company.org"],
-    )
-
-    role: str = Field(
-        default="user",
-        description="Роль пользователя в системе",
-        examples=["user", "admin", "moderator"],
-    )
-
-    is_active: bool = Field(
-        default=True, description="Статус активности аккаунта пользователя"
-    )
-
-    is_verified: bool = Field(
-        default=False, description="Статус верификации email или телефона"
-    )
-
-    created_at: datetime = Field(
-        description="Дата и время создания аккаунта", examples=["2024-01-15T10:30:00Z"]
-    )
-
-    referral_code: str | None = Field(
-        default=None,
-        description="Реферальный код пользователя для приглашения других",
-        examples=["REF123ABC", "INVITE456", None],
-    )
-
+from app.schemas.v1.base import (BaseResponseSchema, ItemResponseSchema)
+from .base import (
+    RegistrationDataSchema,
+    VerificationDataSchema,
+    ResendVerificationDataSchema
+)
 
 class RegistrationResponseSchema(ItemResponseSchema[RegistrationDataSchema]):
     """
@@ -143,107 +66,66 @@ class RegistrationResponseSchema(ItemResponseSchema[RegistrationDataSchema]):
         ```
     """
 
-    message: str = Field(
-        default="Регистрация успешно завершена",
-        description="Сообщение о результате операции регистрации",
-    )
-
-    access_token: Optional[str] = Field(
-        default=None,
-        description="JWT токен доступа (ограниченный до верификации email)"
-    )
-
-    refresh_token: Optional[str] = Field(
-        default=None,
-        description="JWT токен для обновления access токена"
-    )
-
-    token_type: str = Field(
-        default="bearer",
-        description="Тип токена"
-    )
-
-    requires_verification: bool = Field(
-        default=True,
-        description="Требуется ли верификация email для полного доступа"
-    )
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "message": "Регистрация успешно завершена. Подтвердите email для полного доступа.",
-                "item": {
-                    "user_id": 123,
-                    "username": "john_doe",
-                    "email": "john@example.com",
-                    "role": "user",
-                    "is_active": True,
-                    "is_verified": False,
-                    "created_at": "2024-01-15T10:30:00Z",
-                    "referral_code": "REF12345678"
-                },
-                "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-                "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-                "token_type": "bearer",
-                "requires_verification": True
-            }
-        }
+    data: RegistrationDataSchema
 
 
 class VerificationResponseSchema(BaseResponseSchema):
     """
-    Схема ответа при успешной верификации email
+    Схема ответа при успешной верификации email.
+
+    Возвращается после подтверждения email адреса по токену из письма.
+    Подтверждает активацию аккаунта и возможность входа в систему.
 
     Attributes:
-        user_id (int): ID пользователя
-        message (str): Сообщение об успешной верификации
-        access_token (Optional[str]): Новый JWT токен доступа
-        refresh_token (Optional[str]): Новый JWT токен для обновления
-        token_type (str): Тип токена
-        # verified_at (Optional[datetime]): Время верификации (пока закомментировано, не используется)
+        success: Статус успешности операции (всегда True)
+        message: Сообщение о результате верификации
+        data: Данные о верификации
+
+    Example:
+        {
+            "success": true,
+            "message": "Email успешно подтвержден. Теперь вы можете войти в систему",
+            "data": {
+                "user_id": 123,
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "bearer",
+                "verified_at": "2024-01-15T10:35:00Z",
+            }
+        }
     """
-
-    user_id: int = Field(description="ID верифицированного пользователя")
-
-    access_token: Optional[str] = Field(
-        default=None,
-        description="Новый полный JWT токен доступа"
-    )
-
-    refresh_token: Optional[str] = Field(
-        default=None,
-        description="Новый JWT токен для обновления"
-    )
-
-    token_type: str = Field(
-        default="bearer",
-        description="Тип токена"
-    )
-
-    # !Пока оставим закомментированным, по месту не используется.
-    # verified_at: Optional[datetime] = Field(
-    #     default=None,
-    #     description="Время верификации"
-    # )
+    data: VerificationDataSchema
 
 
 class ResendVerificationResponseSchema(BaseResponseSchema):
     """
-    Схема ответа на запрос повторной отправки письма верификации
+    Схема ответа при повторной отправке письма верификации.
+
+    Возвращается при запросе на повторную отправку токена подтверждения email.
+    Содержит информацию о новом письме и времени его действия.
 
     Attributes:
-        email (EmailStr): Email пользователя
-        message (str): Сообщение о результате операции
-    """
+        success: Статус успешности операции (всегда True)
+        message: Сообщение о результате отправки
+        data: Данные о повторной отправке
 
-    email: EmailStr
-    message: str = "Письмо для подтверждения email отправлено"
+    Example:
+        {
+            "success": true,
+            "message": "Письмо верификации отправлено повторно",
+            "data": {
+                "email": "john@example.com",
+                "sent_at": "2024-01-15T10:40:00Z",
+                "expires_in": 3600
+            }
+        }
+    """
+    data: ResendVerificationDataSchema
 
 
 class VerificationStatusResponseSchema(BaseResponseSchema):
     """
-    Схема ответа о статусе верификации email
+    Схема ответа о статусе верификации email !TODO: сделать с data
 
     Attributes:
         email (EmailStr): Email пользователя
