@@ -2,13 +2,15 @@
 Базовый менеджер данных для работы с пользователями.
 """
 
-from typing import Optional, List
-from sqlalchemy import select, or_
+from typing import List, Optional
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import UserModel, UserRole
-from app.schemas import UserSchema, PaginationParams
+from app.schemas import PaginationParams, UserSchema
 from app.services.v1.base import BaseEntityManager
+
 
 class UserDataManager(BaseEntityManager[UserSchema]):
     """
@@ -35,7 +37,7 @@ class UserDataManager(BaseEntityManager[UserSchema]):
             or_(
                 UserModel.email == identifier,
                 UserModel.username == identifier,
-                UserModel.phone == identifier
+                UserModel.phone == identifier,
             )
         )
         user = await self.get_one(statement)
@@ -43,13 +45,10 @@ class UserDataManager(BaseEntityManager[UserSchema]):
         if user:
             self.logger.info(
                 "Пользователь найден",
-                extra={"identifier": identifier, "user_id": user.id}
+                extra={"identifier": identifier, "user_id": user.id},
             )
         else:
-            self.logger.info(
-                "Пользователь не найден",
-                extra={"identifier": identifier}
-            )
+            self.logger.info("Пользователь не найден", extra={"identifier": identifier})
 
         return user
 

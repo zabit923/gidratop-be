@@ -103,7 +103,9 @@ class TokenManager:
         return current_timestamp > expires_at
 
     @staticmethod
-    def validate_token_payload(payload: dict, expected_type: Optional[str] = None) -> dict:
+    def validate_token_payload(
+        payload: dict, expected_type: Optional[str] = None
+    ) -> dict:
         """
         Универсальная валидация payload токена.
 
@@ -124,7 +126,7 @@ class TokenManager:
             if token_type != expected_type:
                 logger.warning(
                     "Неверный тип токена",
-                    extra={"expected": expected_type, "actual": token_type}
+                    extra={"expected": expected_type, "actual": token_type},
                 )
                 raise TokenInvalidError(f"Ожидался тип токена: {expected_type}")
 
@@ -169,9 +171,9 @@ class TokenManager:
             int: Количество секунд до истечения токена
 
         Example:
-            15 минут * 60 = 900 секунд
+            30 минут * 60 = 1800 секунд
         """
-        return settings.TOKEN_EXPIRE_MINUTES * 60
+        return settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
     @staticmethod
     def validate_payload(payload: dict) -> str:
@@ -195,7 +197,6 @@ class TokenManager:
             raise InvalidCredentialsError()
 
         return email
-
 
     # Методы refresh токена
 
@@ -309,7 +310,7 @@ class TokenManager:
             "type": "password_reset",
             "expires_at": (
                 int(datetime.now(timezone.utc).timestamp())
-                + 1800  # 30 минут (в секундах)
+                + settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES * 60
             ),
         }
         return TokenManager.generate_token(payload)
@@ -400,8 +401,8 @@ class TokenManager:
             extra={
                 "user_id": user_schema.id,
                 "is_verified": user_schema.is_verified,
-                "limited": payload["limited"]
-            }
+                "limited": payload["limited"],
+            },
         )
 
         return TokenManager.generate_token(payload)
@@ -435,8 +436,8 @@ class TokenManager:
             extra={
                 "user_id": user_schema.id,
                 "is_verified": user_schema.is_verified,
-                "limited": False
-            }
+                "limited": False,
+            },
         )
 
         return TokenManager.generate_token(payload)
@@ -463,16 +464,14 @@ class TokenManager:
         """
         payload = TokenManager.create_refresh_payload(user_id)
 
-        logger.debug(
-            "Создан refresh токен",
-            extra={"user_id": user_id}
-        )
+        logger.debug("Создан refresh токен", extra={"user_id": user_id})
 
         return TokenManager.generate_token(payload)
 
     @staticmethod
     def is_token_limited(payload: dict) -> bool:
         """
+        !Не использован в коде!
         Проверяет, является ли токен ограниченным.
 
         Args:
@@ -493,6 +492,7 @@ class TokenManager:
     @staticmethod
     def get_user_id_from_payload(payload: dict) -> int:
         """
+        !Не использован в коде!
         Извлекает ID пользователя из payload токена.
 
         Args:
@@ -510,8 +510,9 @@ class TokenManager:
         return int(user_id)
 
     @staticmethod
-    def upgrade_token_to_full(limited_token: str, user_schema: Any) -> str:
+    def upgrade_token_to_full(user_schema: Any) -> str:
         """
+        !Не использован в коде!
         Обновляет ограниченный токен до полного после верификации.
 
         Args:
@@ -527,18 +528,14 @@ class TokenManager:
         Example:
             ```python
             # После верификации email
-            new_token = TokenManager.upgrade_token_to_full(old_token, verified_user)
+            new_token = TokenManager.upgrade_token_to_full(verified_user)
             ```
         """
-        # Проверяем валидность старого токена
-        old_payload = TokenManager.decode_token(limited_token)
-
-        # Создаем новый полный токен
         new_token = TokenManager.create_full_token(user_schema)
 
         logger.info(
             "Токен обновлен с ограниченного на полный",
-            extra={"user_id": user_schema.id}
+            extra={"user_id": user_schema.id},
         )
 
         return new_token

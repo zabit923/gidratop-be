@@ -92,6 +92,7 @@ class UserSchema(BaseSchema):
         )
         ```
     """
+
     # Основные поля
     username: str = Field(description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес")
@@ -114,7 +115,9 @@ class UserSchema(BaseSchema):
     # Финансы
     balance: Decimal = Field(default=Decimal("0.00"), description="Основной баланс")
     bonus_points: int = Field(default=0, description="Бонусные баллы")
-    cashback_balance: Decimal = Field(default=Decimal("0.00"), description="Баланс кешбэка")
+    cashback_balance: Decimal = Field(
+        default=Decimal("0.00"), description="Баланс кешбэка"
+    )
 
     # Настройки уведомлений
     email_notifications: bool = Field(default=True, description="Email уведомления")
@@ -128,10 +131,18 @@ class UserSchema(BaseSchema):
 
     # Статистика
     total_orders: int = Field(default=0, description="Общее количество заказов")
-    total_spent: Decimal = Field(default=Decimal("0.00"), description="Общая потраченная сумма")
-    last_order_date: Optional[datetime] = Field(default=None, description="Дата последнего заказа")
-    last_login: Optional[datetime] = Field(default=None, description="Время последнего входа")
-    registration_source: Optional[str] = Field(default=None, description="Источник регистрации")
+    total_spent: Decimal = Field(
+        default=Decimal("0.00"), description="Общая потраченная сумма"
+    )
+    last_order_date: Optional[datetime] = Field(
+        default=None, description="Дата последнего заказа"
+    )
+    last_login: Optional[datetime] = Field(
+        default=None, description="Время последнего входа"
+    )
+    registration_source: Optional[str] = Field(
+        default=None, description="Источник регистрации"
+    )
 
 
 class UserPublicSchema(BaseSchema):
@@ -162,6 +173,7 @@ class UserPublicSchema(BaseSchema):
             return await user_service.get_public_users_list()
         ```
     """
+
     username: str = Field(description="Имя пользователя")
     avatar: Optional[str] = Field(default=None, description="URL аватара")
     role: UserRole = Field(description="Роль пользователя")
@@ -189,6 +201,7 @@ class UserPrivateSchema(UserSchema):
             return await user_service.get_user_details(current_user.id)
         ```
     """
+
     pass  # Наследует все поля от UserSchema
 
 
@@ -234,6 +247,7 @@ class UserProfileSchema(BaseSchema):
             return await user_service.patch_profile(current_user.id, profile_data)
         ```
     """
+
     first_name: Optional[str] = Field(default=None, description="Имя")
     last_name: Optional[str] = Field(default=None, description="Фамилия")
     middle_name: Optional[str] = Field(default=None, description="Отчество")
@@ -284,6 +298,7 @@ class CurrentUserSchema(CommonBaseSchema):
             return {"admin_data": "secret"}
         ```
     """
+
     id: int = Field(description="ID пользователя")
     username: str = Field(description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес")
@@ -489,10 +504,15 @@ class UserFinancialDataSchema(BaseSchema):
             return await finance_service.get_user_finances(user_id)
         ```
     """
+
     balance: Decimal = Field(default=Decimal("0.00"), description="Основной баланс")
     bonus_points: int = Field(default=0, description="Бонусные баллы")
-    cashback_balance: Decimal = Field(default=Decimal("0.00"), description="Баланс кешбэка")
-    total_spent: Decimal = Field(default=Decimal("0.00"), description="Общая потраченная сумма")
+    cashback_balance: Decimal = Field(
+        default=Decimal("0.00"), description="Баланс кешбэка"
+    )
+    total_spent: Decimal = Field(
+        default=Decimal("0.00"), description="Общая потраченная сумма"
+    )
 
 
 class UserNotificationSettingsSchema(BaseSchema):
@@ -526,6 +546,7 @@ class UserNotificationSettingsSchema(BaseSchema):
             return await notification_service.update_settings(current_user.id, settings)
         ```
     """
+
     email_notifications: bool = Field(default=True, description="Email уведомления")
     sms_notifications: bool = Field(default=False, description="SMS уведомления")
     push_notifications: bool = Field(default=True, description="Push уведомления")
@@ -566,10 +587,21 @@ class UserStatsSchema(BaseSchema):
             return await stats_service.get_user_stats(user_id)
         ```
     """
+
     total_orders: int = Field(default=0, description="Общее количество заказов")
-    total_spent: Decimal = Field(default=Decimal("0.00"), description="Общая потраченная сумма")
-    last_order_date: Optional[datetime] = Field(default=None, description="Дата последнего заказа")
-    last_login: Optional[datetime] = Field(default=None, description="Время последнего входа")
-    registration_source: Optional[str] = Field(default=None, description="Источник регистрации")
+    total_spent: Decimal = Field(
+        default=Decimal("0.00"), description="Общая потраченная сумма"
+    )
+    last_order_date: Optional[datetime] = Field(
+        default=None, description="Дата последнего заказа"
+    )
+    last_login: Optional[datetime] = Field(
+        default=None, description="Время последнего входа"
+    )
+    registration_source: Optional[str] = Field(
+        default=None, description="Источник регистрации"
+    )
     referral_code: Optional[str] = Field(default=None, description="Реферальный код")
-    referred_users_count: int = Field(default=0, description="Количество приглашенных пользователей")
+    referred_users_count: int = Field(
+        default=0, description="Количество приглашенных пользователей"
+    )

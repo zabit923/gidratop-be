@@ -1,9 +1,10 @@
-from .v1.auth import (ForgotPasswordSchema, InvalidCredentialsResponseSchema,
+from .v1.auth import (AuthSchema, ForgotPasswordSchema, InvalidCredentialsResponseSchema,
                       LogoutResponseSchema, PasswordResetConfirmResponseSchema,
                       PasswordResetConfirmSchema, PasswordResetResponseSchema,
                       TokenExpiredResponseSchema, TokenInvalidResponseSchema,
-                      TokenMissingResponseSchema, TokenResponseSchema,
-                      UserInactiveResponseSchema, WeakPasswordResponseSchema)
+                      TokenMissingResponseSchema, TokenDataSchema, TokenResponseSchema,
+                      UserInactiveResponseSchema, WeakPasswordResponseSchema, LogoutDataSchema,
+                      PasswordResetConfirmDataSchema, PasswordResetDataSchema)
 from .v1.base import (BaseCommonResponseSchema, BaseRequestSchema,
                       BaseResponseSchema, BaseSchema, CommonBaseSchema,
                       ErrorResponseSchema, ItemResponseSchema,
@@ -15,17 +16,18 @@ from .v1.pagination import Page, PaginationParams, UserSortFields
 from .v1.registration import (RegistrationDataSchema,
                               RegistrationRequestSchema,
                               RegistrationResponseSchema,
+                              ResendVerificationDataSchema,
                               ResendVerificationRequestSchema,
                               ResendVerificationResponseSchema,
-                              VerificationResponseSchema,
-                              VerificationStatusResponseSchema,
                               UserCreationResponseSchema,
-                              UserExistsResponseSchema)
+                              UserExistsResponseSchema, VerificationDataSchema,
+                              VerificationResponseSchema, VerificationStatusDataSchema,
+                              VerificationStatusResponseSchema)
 from .v1.users import (CurrentUserSchema, UserCredentialsSchema,
-                       UserDetailDataSchema, UserPrivateSchema,
+                       UserDetailDataSchema, UserListResponseSchema,
+                       UserNotFoundResponseSchema, UserPrivateSchema,
                        UserProfileSchema, UserPublicSchema, UserSchema,
-                       UserStatusDataSchema, UserNotFoundResponseSchema,
-                       UserListResponseSchema)
+                       UserStatusDataSchema, ForbiddenResponseSchema)
 
 __all__ = [
     # Errors
@@ -55,22 +57,31 @@ __all__ = [
     "UserCredentialsSchema",
     "UserNotFoundResponseSchema",
     "UserListResponseSchema",
+    "ForbiddenResponseSchema",
     # Registration
     "RegistrationDataSchema",
     "RegistrationResponseSchema",
     "RegistrationRequestSchema",
     "ResendVerificationRequestSchema",
+    "VerificationDataSchema",
+    "ResendVerificationDataSchema",
     "VerificationResponseSchema",
     "ResendVerificationResponseSchema",
+    "VerificationStatusDataSchema",
     "VerificationStatusResponseSchema",
     "UserCreationResponseSchema",
     "UserExistsResponseSchema",
     # Auth
+    "AuthSchema",
     "ForgotPasswordSchema",
     "PasswordResetConfirmSchema",
+    "TokenDataSchema",
     "TokenResponseSchema",
+    "LogoutDataSchema",
     "LogoutResponseSchema",
+    "PasswordResetDataSchema",
     "PasswordResetResponseSchema",
+    "PasswordResetConfirmDataSchema",
     "PasswordResetConfirmResponseSchema",
     "InvalidCredentialsResponseSchema",
     "TokenExpiredResponseSchema",

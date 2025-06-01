@@ -9,19 +9,21 @@ Routes:
 Classes:
     UserRouter: Класс для настройки маршрутов пользователей
 """
+
 from typing import Optional
-from redis import Redis
+
 from fastapi import Depends, Query
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.connections.database import get_db_session
+
 from app.core.connections.cache import get_redis_client
+from app.core.connections.database import get_db_session
 from app.core.security.auth import get_current_user
-from app.routes.base import BaseRouter
 from app.models import UserRole
-from app.schemas import (Page, PaginationParams, UserSortFields,
-                         CurrentUserSchema, UserListResponseSchema)
-from app.schemas.v1.auth.exception import TokenMissingResponseSchema
-from app.schemas.v1.users.exception import ForbiddenResponseSchema
+from app.routes.base import BaseRouter
+from app.schemas import (CurrentUserSchema, Page, PaginationParams,
+                         UserListResponseSchema, UserSortFields,
+                         TokenMissingResponseSchema, ForbiddenResponseSchema)
 from app.services.v1.users.service import UserService
 
 
@@ -47,6 +49,7 @@ class UserRouter(BaseRouter):
 
         Определяет endpoints для получения списка пользователей...
         """
+
         @self.router.get(
             path="",
             response_model=UserListResponseSchema,

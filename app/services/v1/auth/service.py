@@ -6,7 +6,7 @@
 
 from datetime import datetime, timezone
 from typing import Optional
-
+from fastapi import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,16 +14,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import (ForbiddenError, InvalidCredentialsError,
                                  TokenExpiredError, TokenInvalidError,
                                  UserNotFoundError)
-from app.core.integrations.mail import AuthEmailDataManager
 from app.core.integrations.cache.auth import AuthRedisDataManager
+from app.core.integrations.mail import AuthEmailDataManager
 from app.core.security.password import PasswordHasher
 from app.core.security.token import TokenManager
-from app.schemas.v1.auth import (AuthSchema, LogoutResponseSchema,
+from app.core.security.cookies import CookieManager
+from app.core.settings import settings
+from app.schemas import (AuthSchema, LogoutResponseSchema,
                                  PasswordResetConfirmResponseSchema,
                                  PasswordResetConfirmSchema,
                                  PasswordResetResponseSchema,
-                                 TokenResponseSchema)
-from app.schemas.v1.users import UserCredentialsSchema
+                                 TokenResponseSchema,
+                                 LogoutDataSchema,
+                                 PasswordResetConfirmDataSchema,
+                                 PasswordResetDataSchema, UserCredentialsSchema,
+                                 #TokenDataSchema
+                                 )
 from app.services.v1.base import BaseService
 
 from .data_manager import AuthDataManager
@@ -56,15 +62,19 @@ class AuthService(BaseService):
         self.email_data_manager = AuthEmailDataManager()
         self.redis_data_manager = AuthRedisDataManager(redis) if redis else None
 
-
     async def authenticate(
-        self, form_data: OAuth2PasswordRequestForm
+        self,
+        form_data: OAuth2PasswordRequestForm,
+        response: Optional[Response] = None,
+        use_cookies: bool = False
     ) -> TokenResponseSchema:
         """
         Аутентифицирует пользователя по логину и паролю.
 
         Args:
             form_data: Данные для аутентификации пользователя
+            response: HTTP ответ для установки куков (опционально)
+            use_cookies: Использовать ли куки для хранения токенов
 
         Returns:
             TokenResponseSchema: Токены доступа
@@ -156,8 +166,22 @@ class AuthService(BaseService):
         access_token = await self.create_token(user_schema)
         refresh_token = await self.create_refresh_token(user_schema.id)
 
+        # Опционально устанавливаем куки
+        if response and use_cookies:
+            CookieManager.set_auth_cookies(response, access_token, refresh_token)
+
+        # token_data = TokenDataSchema(
+        #     access_token=access_token,
+        #     refresh_token=refresh_token,
+        #     expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        # )
+
         return TokenResponseSchema(
-            access_token=access_token, refresh_token=refresh_token
+            message="Аутентификация успешна",
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            # data=token_data,
         )
 
     async def create_token(self, user_schema: UserCredentialsSchema) -> str:
@@ -213,7 +237,12 @@ class AuthService(BaseService):
 
         return refresh_token
 
-    async def refresh_token(self, refresh_token: str) -> TokenResponseSchema:
+    async def refresh_token(
+        self,
+        refresh_token: str,
+        response: Optional[Response] = None,
+        use_cookies: bool = False
+    ) -> TokenResponseSchema:
         """
         Обновляет access токен с помощью refresh токена.
 
@@ -268,9 +297,22 @@ class AuthService(BaseService):
                 "Токены успешно обновлены",
                 extra={"user_id": user_id},
             )
+            # token_data = TokenDataSchema(
+            #     access_token=access_token,
+            #     refresh_token=new_refresh_token,
+            #     expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            # )
+
+            # Опционально обновляем куки
+            if response and use_cookies:
+                CookieManager.set_auth_cookies(response, access_token, new_refresh_token)
 
             return TokenResponseSchema(
-                access_token=access_token, refresh_token=new_refresh_token
+                message="Токен успешно обновлен",
+                access_token=access_token,
+                refresh_token=new_refresh_token,
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                # data=token_data
             )
 
         except (TokenExpiredError, TokenInvalidError) as e:
@@ -281,7 +323,12 @@ class AuthService(BaseService):
             )
             raise
 
-    async def logout(self, authorization: Optional[str]) -> LogoutResponseSchema:
+    async def logout(
+        self,
+        authorization: Optional[str],
+        response: Optional[Response] = None,
+        clear_cookies: bool = False
+    ) -> LogoutResponseSchema:
         """
         Выполняет выход пользователя из системы.
 
@@ -326,7 +373,16 @@ class AuthService(BaseService):
 
             # Удаляем токен из Redis
             await self.redis_data_manager.remove_token(token)
-            return LogoutResponseSchema()
+
+            logout_data = LogoutDataSchema(logged_out_at=datetime.now(timezone.utc))
+
+            # Опционально очищаем куки
+            if response and clear_cookies:
+                CookieManager.clear_auth_cookies(response)
+
+            return LogoutResponseSchema(
+                message="Выход выполнен успешно", data=logout_data
+            )
 
         except (TokenExpiredError, TokenInvalidError) as e:
             # Для этих ошибок мы не можем продолжить процесс выхода
@@ -378,9 +434,13 @@ class AuthService(BaseService):
                 extra={"user_id": user.id, "email": user.email},
             )
 
+            reset_data = PasswordResetDataSchema(
+                email=email, expires_in=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+            )
+
             return PasswordResetResponseSchema(
-                success=True,
                 message="Инструкции по сбросу пароля отправлены на ваш email",
+                data=reset_data,
             )
 
         except Exception as e:
@@ -434,8 +494,13 @@ class AuthService(BaseService):
             )
 
             self.logger.info("Пароль успешно изменен", extra={"user_id": user_id})
+
+            confirm_data = PasswordResetConfirmDataSchema(
+                password_changed_at=datetime.now(timezone.utc)
+            )
+
             return PasswordResetConfirmResponseSchema(
-                success=True, message="Пароль успешно изменен"
+                message="Пароль успешно изменен", data=confirm_data
             )
 
         except (TokenExpiredError, TokenInvalidError) as e:

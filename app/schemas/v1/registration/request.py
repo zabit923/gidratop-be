@@ -106,6 +106,7 @@ class RegistrationRequestSchema(BaseRequestSchema):
         # Используем базовый валидатор паролей
         return BasePasswordValidator.validate_password_strength(v, username)
 
+
 class ResendVerificationRequestSchema(BaseRequestSchema):
     """
     Схема запроса на повторную отправку письма верификации

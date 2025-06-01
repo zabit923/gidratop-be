@@ -3,7 +3,9 @@
 
 Содержит Pydantic схемы для входящих данных в endpoints аутентификации.
 """
+
 import re
+
 from pydantic import EmailStr, Field, field_validator
 
 from app.schemas.v1.base import BaseRequestSchema
@@ -39,7 +41,9 @@ class AuthSchema(BaseRequestSchema):
         if v.startswith("+7"):
             phone_pattern = r"^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$"
             if not re.match(phone_pattern, v):
-                raise ValueError("Неверный формат телефона. Используйте: +7 (XXX) XXX-XX-XX")
+                raise ValueError(
+                    "Неверный формат телефона. Используйте: +7 (XXX) XXX-XX-XX"
+                )
             return v
 
         # Иначе это обычный username

@@ -1,5 +1,7 @@
 from fastapi import HTTPException, Request
+
 from app.core.security.token import TokenManager
+
 
 class VerificationMiddleware:
     """
@@ -54,8 +56,8 @@ class VerificationMiddleware:
                         detail={
                             "message": "Требуется подтверждение email",
                             "error_type": "email_verification_required",
-                            "verification_url": "/api/v1/verification/resend"
-                        }
+                            "verification_url": "/api/v1/verification/resend",
+                        },
                     )
 
         except Exception as e:
@@ -66,7 +68,12 @@ class VerificationMiddleware:
 
     def _requires_auth(self, path: str) -> bool:
         """Проверяет, требует ли путь аутентификации."""
-        public_paths = {"/docs", "/openapi.json", "/api/v1/auth/login", "/api/v1/register"}
+        public_paths = {
+            "/docs",
+            "/openapi.json",
+            "/api/v1/auth/login",
+            "/api/v1/register",
+        }
         return not any(path.startswith(p) for p in public_paths)
 
     def _requires_verification(self, path: str) -> bool:

@@ -3,9 +3,10 @@
 
 Обеспечивает доступ к данным пользователей для операций аутентификации.
 """
-from typing import  Optional
 
-from sqlalchemy import select, or_
+from typing import Optional
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import UserModel
@@ -44,7 +45,7 @@ class AuthDataManager(UserDataManager):
             or_(
                 UserModel.email == identifier,
                 UserModel.username == identifier,
-                UserModel.phone == identifier
+                UserModel.phone == identifier,
             )
         )
 
@@ -53,12 +54,9 @@ class AuthDataManager(UserDataManager):
         if user:
             self.logger.info(
                 "Пользователь найден",
-                extra={"identifier": identifier, "user_id": user.id}
+                extra={"identifier": identifier, "user_id": user.id},
             )
         else:
-            self.logger.info(
-                "Пользователь не найден",
-                extra={"identifier": identifier}
-            )
+            self.logger.info("Пользователь не найден", extra={"identifier": identifier})
 
         return user
