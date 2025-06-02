@@ -1,3 +1,29 @@
+"""
+Модуль команд для управления инфраструктурой разработки.
+
+Основной Flow:
+1. dev() -> Главная команда разработки:
+   - start_infrastructure() -> Запуск всей инфраструктуры
+     - load_env_vars() -> Загрузка конфигурации
+     - Проверка занятых портов через is_port_free()
+     - Проверка Docker daemon
+     - run_compose_command("down") -> Очистка старых контейнеров
+     - get_available_port() -> Поиск свободных портов для сервисов
+     - run_compose_command("up -d") -> Запуск контейнеров
+     - check_services() -> Ожидание готовности сервисов
+     - migrate() -> Применение миграций БД
+   - find_free_port() -> Поиск порта для FastAPI
+   - uvicorn.run() -> Запуск сервера разработки
+
+Вспомогательные команды:
+- serve() -> Только сервер без инфраструктуры
+- start_all() -> migrate() + serve()
+- setup()/activate() -> Настройка окружения через скрипты
+
+Утилиты проверки:
+- create_database() -> Создание БД если не существует
+- get_postgres_container_name() -> Поиск контейнера PostgreSQL
+"""
 import os
 import subprocess
 from pathlib import Path
@@ -6,7 +32,8 @@ import time
 import socket
 import platform
 import uvicorn
-
+import threading
+import sys
 
 class DockerDaemonNotRunningError(Exception):
     """
@@ -109,13 +136,15 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
     if env:
         environment.update(env)
 
+    show_output = any(cmd in command for cmd in ['up', 'build'])
+
     try:
         subprocess.run(
             ["docker-compose", "-f", compose_file] + command,
             cwd=ROOT_DIR,
             check=True,
             env=environment,
-            capture_output=True,
+            capture_output=not show_output,
             text=True
         )
     except subprocess.CalledProcessError as e:
@@ -130,7 +159,21 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
         raise
 
 def find_free_port(start_port: int = 8000) -> int:
-    """Ищет свободный порт, начиная с указанного"""
+    """
+    Ищет первый свободный порт начиная с указанного.
+
+    Используется для FastAPI сервера в dev режиме.
+    Проверяет возможность bind на порт через socket.
+
+    Args:
+        start_port: Начальный порт для поиска
+
+    Returns:
+        int: Номер свободного порта
+
+    Raises:
+        RuntimeError: Если все порты до 65535 заняты
+    """
     port = start_port
     while port < 65535:
         try:
@@ -142,6 +185,21 @@ def find_free_port(start_port: int = 8000) -> int:
     raise RuntimeError("Нет свободных портов! Ахуеть!")
 
 def get_available_port(default_port: int) -> int:
+    """
+    Аналог find_free_port но с другим сообщением об ошибке.
+
+    Дублирует логику find_free_port. Используется для поиска
+    портов инфраструктурных сервисов в start_infrastructure.
+
+    Args:
+        default_port: Предпочитаемый порт
+
+    Returns:
+        int: Свободный порт
+
+    Raises:
+        RuntimeError: С указанием конкретного порта в ошибке
+    """
     port = default_port
     while port < 65535:
         try:
@@ -153,7 +211,18 @@ def get_available_port(default_port: int) -> int:
     raise RuntimeError(f"Не могу найти свободный порт после {default_port}")
 
 def is_port_free(port: int) -> bool:
-    """Проверяет свободен ли порт"""
+    """
+    Проверяет доступность конкретного порта.
+
+    Используется для валидации портов из .env.dev перед запуском
+    инфраструктуры. Возвращает булево значение вместо исключения.
+
+    Args:
+        port: Номер порта для проверки
+
+    Returns:
+        bool: True если порт свободен, False если занят
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(('', port))
@@ -162,12 +231,58 @@ def is_port_free(port: int) -> bool:
         return False
 
 def get_port(service: str) -> int:
-    """Получает порт из переменных окружения или использует значение по умолчанию"""
+    """
+    Получает порт сервиса из переменных окружения или дефолтный.
+
+    Преобразует имя сервиса в формат переменной окружения
+    и ищет значение. Fallback на DEFAULT_PORTS.
+
+    Args:
+        service: Имя сервиса (например 'REDIS_PORT')
+
+    Returns:
+        int: Номер порта для сервиса
+
+    Note:
+        Убирает '_PORT' из имени и приводит к верхнему регистру
+    """
     service_upper = service.upper().replace('_PORT', '')
     return int(os.getenv(service, DEFAULT_PORTS[service_upper]))
 
-def check_service(name: str, port: int, retries: int = 5, delay: int = 2) -> bool:
-    """Базовая функция проверки сервиса"""
+def show_loader(message: str, stop_event: threading.Event):
+    """
+    Показывает анимированный loader
+
+    Args:
+        message: Сообщение для отображения
+        stop_event: Событие для остановки анимации
+    """
+    chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    i = 0
+    while not stop_event.is_set():
+        sys.stdout.write(f'\r{chars[i % len(chars)]} {message}')
+        sys.stdout.flush()
+        time.sleep(0.1)
+        i += 1
+    sys.stdout.write('\r' + ' ' * (len(message) + 2) + '\r')
+    sys.stdout.flush()
+
+def check_service(name: str, port: int, retries: int = 10, delay: int = 3) -> bool:
+    """
+    Проверяет доступность сервиса через TCP подключение.
+
+    Базовая функция для ожидания готовности сервисов после
+    запуска контейнеров. Делает несколько попыток с задержкой.
+
+    Args:
+        name: Имя сервиса для логирования
+        port: Порт для подключения
+        retries: Количество попыток
+        delay: Задержка между попытками в секундах
+
+    Returns:
+        bool: True если сервис отвечает, False если недоступен
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     for _ in range(retries):
         try:
@@ -180,10 +295,22 @@ def check_service(name: str, port: int, retries: int = 5, delay: int = 2) -> boo
     return False
 
 def check_services():
-    """Проверяет доступность всех сервисов"""
+    """
+    Проверяет готовность всех инфраструктурных сервисов.
+
+    Вызывается после docker-compose up для ожидания полной
+    готовности Redis, RabbitMQ и PostgreSQL. Использует
+    разное количество попыток для разных сервисов.
+
+    Returns:
+        bool: True если все сервисы готовы, False при таймауте
+
+    Note:
+        PostgreSQL получает 30 попыток, остальные по 5
+    """
     services_config = {
         'Redis': ('REDIS_PORT', 5),
-        'RabbitMQ': ('RABBITMQ_UI_PORT', 5),
+        'RabbitMQ': ('RABBITMQ_UI_PORT', 20),
         'PostgreSQL': ('POSTGRES_PORT', 30),
     }
 
@@ -196,10 +323,17 @@ def check_services():
 
 def get_postgres_container_name() -> str:
     """
-    Находит имя контейнера PostgreSQL или возвращает стандартное имя
+    Определяет имя контейнера PostgreSQL или fallback для прямого подключения.
+
+    Пытается найти запущенный контейнер через docker ps с фильтром по имени.
+    Если Docker недоступен или контейнер не найден - возвращает "postgres"
+    для прямого подключения к локальной БД.
 
     Returns:
-        str: Имя контейнера PostgreSQL или стандартное имя
+        str: Имя контейнера PostgreSQL или "postgres" для прямого подключения
+
+    Note:
+        Используется в create_database() для выбора метода подключения
     """
     try:
         # Проверяем, доступен ли Docker
@@ -232,7 +366,20 @@ def get_postgres_container_name() -> str:
 
 def create_database():
     """
-    Создание базы данных, если она не существует
+    Создаёт базу данных если она не существует.
+
+    Поддерживает два режима:
+    1. Через Docker exec в контейнер PostgreSQL
+    2. Прямое подключение через psql (если Docker недоступен)
+
+    Получает настройки из .env.dev, проверяет существование БД
+    через SQL запрос, создаёт если отсутствует.
+
+    Returns:
+        bool: True при успехе, False при ошибке
+
+    Note:
+        Использует PGPASSWORD для передачи пароля в psql
     """
     print("🛠️ Проверяем наличие базы данных...")
 
@@ -311,6 +458,27 @@ def create_database():
 
 
 def start_infrastructure():
+    """
+    Главная функция запуска инфраструктуры разработки.
+
+    Полный цикл подготовки окружения:
+    1. Проверка занятости портов из .env.dev
+    2. Валидация Docker daemon
+    3. Остановка старых контейнеров (down --remove-orphans)
+    4. Очистка volumes
+    5. Поиск свободных портов для всех сервисов
+    6. Запуск контейнеров с новыми портами
+    7. Ожидание готовности сервисов
+    8. Выполнение миграций БД
+    9. Вывод адресов сервисов
+
+    Returns:
+        bool: True при успешном запуске, False при ошибках
+
+    Raises:
+        DockerDaemonNotRunningError: Проблемы с Docker
+        DockerContainerConflictError: Конфликты контейнеров
+    """
     print("🚀 Запускаем инфраструктуру...")
 
     env_vars = load_env_vars()
@@ -392,6 +560,10 @@ def start_infrastructure():
             f"{service}_PORT": str(port)
             for service, port in ports.items()
         }
+        # Запуск контейнеров с loader
+        stop_loader = threading.Event()
+        loader_thread = threading.Thread(target=show_loader, args=("Запускаем контейнеры...", stop_loader))
+        loader_thread.start()
 
         try:
             run_compose_command(["up", "-d"], COMPOSE_FILE_WITHOUT_BACKEND, env=env)
@@ -406,6 +578,10 @@ def start_infrastructure():
                 container_name = container_match.group(1) if container_match else None
                 raise DockerContainerConflictError(container_name)
             raise
+        finally:
+            stop_loader.set()
+            loader_thread.join()
+            print("✅ Контейнеры запущены!")
 
         # Ждем доступности сервисов
         check_services()
@@ -415,15 +591,25 @@ def start_infrastructure():
         migrate()
         print("✅ Миграции выполнены!")
 
-        print("\n🔗 Доступные адреса:")
+        print("\n" + "="*60)
+        print("🎯 ИНФРАСТРУКТУРА ГОТОВА")
+        print("="*60)
+
+        print("\n📡 СЕРВИСЫ:")
         print(f"📊 FastAPI Swagger:    http://localhost:{ports['FASTAPI']}/docs")
-        print(f"🐰 RabbitMQ UI:       http://localhost:{ports['RABBITMQ_UI']}")
+        print(f"🐰 RabbitMQ:       http://localhost:{ports['RABBITMQ_UI']}")
         print(f"🗄️ PostgreSQL:        localhost:{ports['POSTGRES']}")
         print(f"📦 Redis:             localhost:{ports['REDIS']}")
+
+        print("\n🔧 АДМИН ПАНЕЛИ:")
         print(f"🔍 PgAdmin:           http://localhost:{ports['PGADMIN']}")
         print(f"📊 Redis Commander:    http://localhost:{ports['REDIS_COMMANDER']}")
 
-        print("✅ Инфраструктура готова!")
+        print("\n🔑 ДОСТУПЫ:")
+        print(f"🔍 PgAdmin:           {env_vars.get('PGADMIN_DEFAULT_EMAIL', 'admin@admin.com')} / {env_vars.get('PGADMIN_DEFAULT_PASSWORD', 'admin')}")
+        print(f"🐰 RabbitMQ:          {env_vars.get('RABBITMQ_USER', 'guest')} / {env_vars.get('RABBITMQ_PASS', 'guest')}")
+        print(f"🗄️ PostgreSQL:        {env_vars.get('POSTGRES_USER', 'postgres')} / {env_vars.get('POSTGRES_PASSWORD', 'postgres')}")
+
         return True
     except DockerDaemonNotRunningError as e:
         print(f"❌ {e}")
@@ -441,7 +627,18 @@ def start_infrastructure():
         return False
 
 def setup():
-    """Настройка окружения"""
+    """
+    Настройка окружения разработки через системные скрипты.
+
+    Выбирает и запускает соответствующий скрипт установки
+    в зависимости от операционной системы:
+    - Windows: scripts/setup.ps1 через PowerShell
+    - Unix/Linux: scripts/setup.sh через Bash
+
+    Note:
+        Скрипты должны содержать установку зависимостей,
+        создание виртуального окружения, копирование .env файлов
+    """
     system = platform.system()
     if system == "Windows":
         subprocess.run(["powershell", "-File", "scripts/setup.ps1"], check=True)
@@ -449,7 +646,17 @@ def setup():
         subprocess.run(["bash", "scripts/setup.sh"], check=True)
 
 def activate():
-    """Активация окружения и запуск dev режима"""
+    """
+    Активация виртуального окружения через системные скрипты.
+
+    Запускает платформо-специфичные скрипты активации:
+    - Windows: scripts/activate.ps1 через PowerShell
+    - Unix/Linux: scripts/activate.sh через Bash
+
+    Note:
+        Обычно вызывается после setup() для подготовки
+        окружения к разработке
+    """
     system = platform.system()
     if system == "Windows":
         subprocess.run(["powershell", "-File", "scripts/activate.ps1"], check=True)
@@ -458,10 +665,19 @@ def activate():
 
 def dev(port: Optional[int] = None):
     """
-    Запуск в режиме разработки
+    Основная команда для разработки - запуск полного стека.
+
+    Выполняет полный цикл подготовки и запуска:
+    1. start_infrastructure() - поднимает всю инфраструктуру
+    2. find_free_port() - находит свободный порт для FastAPI
+    3. uvicorn.run() - запускает сервер с hot reload
 
     Args:
-        port: Конкретный порт для запуска. Если None - найдет свободный
+        port: Конкретный порт для FastAPI. Если None - автопоиск
+
+    Note:
+        При ошибке инфраструктуры прерывает выполнение.
+        Сервер запускается с debug логами и автоперезагрузкой
     """
 
     # Запускаем инфраструктуру
@@ -472,7 +688,14 @@ def dev(port: Optional[int] = None):
         port = find_free_port()
 
 
-    print(f"🚀 Запускаем сервер на порту {port}")
+    print("\n" + "="*60)
+    print("🚀 ЗАПУСК FASTAPI СЕРВЕРА")
+    print("="*60)
+    print(f"🌐 Адрес: http://localhost:{port}")
+    print(f"📚 Документация: http://localhost:{port}/docs")
+    print(f"🔄 Hot Reload: включён")
+    print("="*60 + "\n")
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
@@ -484,10 +707,15 @@ def dev(port: Optional[int] = None):
 
 def serve(port: Optional[int] = None):
     """
-    Запускает uvicorn сервер
+    Запуск только FastAPI сервера без инфраструктуры.
+
+    Альтернатива dev() когда инфраструктура уже запущена
+    или используется внешняя. Запускает uvicorn через subprocess
+    с продакшн настройками (proxy-headers, forwarded-allow-ips).
 
     Args:
-        port: Конкретный порт для запуска. Если None - найдет свободный
+        port: Порт для сервера. Если None - автопоиск
+
     """
     if port is None:
         port = find_free_port()
@@ -497,27 +725,58 @@ def serve(port: Optional[int] = None):
         "uvicorn",
         "app.main:app",
         "--host", "0.0.0.0",
-        "--port", "8000",
+        "--port", str(port),
         "--proxy-headers",
         "--forwarded-allow-ips=*"
     ], check=True)
 
 def migrate():
     """
-    Запуск миграций.
+    Применение миграций базы данных через Alembic.
+
+    Выполняет команду 'alembic upgrade head' для применения
+    всех неприменённых миграций. Используется автоматически
+    в start_infrastructure() и start_all().
+
+    Raises:
+        subprocess.CalledProcessError: При ошибках миграции
+
+    Note:
+        Требует настроенного alembic.ini и доступной БД
     """
     subprocess.run(["alembic", "upgrade", "head"], check=True)
 
 def format():
     """
-    Форматирование кода.
+    Автоматическое форматирование кода.
+
+    Последовательно запускает:
+    1. black app/ - форматирование Python кода
+    2. isort app/ - сортировка импортов
+
+    Raises:
+        subprocess.CalledProcessError: При ошибках форматирования
+
+    Note:
+        Изменяет файлы на месте без подтверждения
     """
     subprocess.run(["black", "app/"], check=True)
     subprocess.run(["isort", "app/"], check=True)
 
 def check():
     """
-    Проверка кода.
+    Статическая проверка качества кода.
+
+    Выполняет проверки через mypy и flake8 с группировкой
+    ошибок по типам для удобного анализа:
+    - MyPy: типы, аргументы, возвращаемые значения
+    - Flake8: длинные строки, неиспользуемые переменные, стиль
+
+    Returns:
+        bool: True если проверки прошли без ошибок
+
+    Note:
+        Продолжает выполнение даже при ошибках одного из инструментов
     """
     mypy_success = True
     flake8_success = True
@@ -606,14 +865,27 @@ def check():
 
 def lint():
     """
-    Запуск линтера.
+    Полный цикл линтинга: форматирование + проверка.
+
+    Последовательно вызывает format() и check() для
+    автоматического исправления стиля и проверки качества кода.
+
+    Note:
+        Удобная команда для подготовки кода к коммиту
     """
     format()
     check()
 
 def test():
     """
-    Запуск тестов.
+    Запуск тестов через pytest с тестовым окружением.
+
+    Устанавливает ENV_FILE=".env.test" для использования
+    тестовой конфигурации и запускает pytest с verbose выводом.
+
+    Note:
+        Подавляет CalledProcessError для корректного завершения
+        даже при падающих тестах
     """
     env = os.environ.copy()
     env["ENV_FILE"] = ".env.test"
@@ -627,6 +899,14 @@ def test():
         pass
 
 def start_all():
-    """Запускает миграции и сервер"""
+    """
+    Быстрый старт: миграции + сервер без инфраструктуры.
+
+    Альтернатива dev() когда инфраструктура уже запущена.
+    Применяет миграции и запускает сервер через serve().
+
+    Note:
+        Не проверяет доступность БД перед миграциями
+    """
     migrate()
     serve()
