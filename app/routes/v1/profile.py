@@ -4,11 +4,11 @@ from app.core.dependencies import get_db_session
 from app.core.security.auth import get_current_user
 from app.routes.base import BaseRouter
 from app.schemas import (CurrentUserSchema,
-                         PasswordFormSchema, PasswordResponseSchema,
+                         PasswordFormSchema,
                          PasswordUpdateResponseSchema, ProfileResponseSchema,
                          ProfileUpdateSchema)
-from app.schemas.v1.auth.exceptions import TokenMissingResponseSchema
-from app.schemas.v1.profile.exceptions import (
+from app.schemas.v1.auth.exception import TokenMissingResponseSchema
+from app.schemas.v1.profile.exception import (
     InvalidCurrentPasswordResponseSchema,
     ProfileNotFoundResponseSchema,
     UserNotFoundResponseSchema)

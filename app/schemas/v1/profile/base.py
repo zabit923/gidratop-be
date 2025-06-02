@@ -1,20 +1,21 @@
 from pydantic import EmailStr, Field
 
-from app.schemas.v1.base import BaseSchema
+from app.schemas.v1.base import CommonBaseSchema
 
 
-class ProfileSchema(BaseSchema):
+class ProfileSchema(CommonBaseSchema):
     """
     Схема для представления профиля пользователя.
 
     Args:
-        username: Имя пользователя.
-        email: Электронная почта пользователя.
-        phone: Телефон пользователя.
-        avatar: URL аватара пользователя.
+        first_name (str): Имя пользователя.
+        last_name (str): Фамилия пользователя.
+        email (EmailStr): Электронная почта пользователя.
+        phone (str): Телефон пользователя.
     """
 
-    username: str = Field(min_length=0, max_length=50, description="Имя пользователя")
+    first_name: str | None = Field(None, min_length=0, max_length=50, description="Имя пользователя")
+    last_name: str | None = Field(None, min_length=0, max_length=50, description="Фамилия пользователя")
     email: EmailStr = Field(description="Email пользователя")
     phone: str | None = Field(
         None,

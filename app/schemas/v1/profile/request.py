@@ -9,12 +9,14 @@ class ProfileUpdateSchema(BaseRequestSchema):
     Схема для представления профиля пользователя.
 
     Args:
-        username: Имя пользователя.
-        email: Электронная почта пользователя.
-        phone: Телефон пользователя.
+        first_name (str): Имя пользователя.
+        last_name (str): Фамилия пользователя.
+        email (EmailStr): Электронная почта пользователя.
+        phone (str): Телефон пользователя.
     """
 
-    username: str = Field(min_length=0, max_length=50, description="Имя пользователя")
+    first_name: str = Field(min_length=0, max_length=50, description="Имя пользователя")
+    last_name: str = Field(min_length=0, max_length=50, description="Фамилия пользователя")
     email: EmailStr = Field(description="Email пользователя")
     phone: str | None = Field(
         None,
@@ -29,12 +31,10 @@ class PasswordFormSchema(BaseRequestSchema):
     Схема для формы изменения пароля.
 
     Attributes:
-        old_password (str): Текущий пароль пользователя.
         new_password (str): Новый пароль пользователя.
         confirm_password (str): Подтверждение нового пароля.
     """
 
-    old_password: str = Field(..., description="Текущий пароль")
     new_password: str = Field(
         ...,
         description="Новый пароль (минимум 8 символов, заглавная и строчная буква, цифра, спецсимвол)",

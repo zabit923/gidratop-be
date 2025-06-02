@@ -4,11 +4,10 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import (InvalidCurrentPasswordError,
-                                 ProfileNotFoundError,
+from app.core.exceptions import (ProfileNotFoundError,
                                  UserNotFoundError)
-from app.core.security import PasswordHasher
-from app.schemas import (CurrentUserSchema, PasswordDataSchema,
+from app.core.security.password import PasswordHasher
+from app.schemas import (CurrentUserSchema,
                          PasswordFormSchema, PasswordUpdateResponseSchema,
                          ProfileResponseSchema, ProfileUpdateSchema)
 from app.services.v1.base import BaseService
@@ -97,10 +96,12 @@ class ProfileService(BaseService):
                 value=current_user.id,
             )
 
-        if not PasswordHasher.verify(
-            user_model.hashed_password, password_data.old_password
-        ):
-            raise InvalidCurrentPasswordError()
+        # Старый (существующий) пароль вводить не нужно
+
+        # if not PasswordHasher.verify(
+        #     user_model.hashed_password, password_data.old_password
+        # ):
+        #     raise InvalidCurrentPasswordError()
 
         new_hashed_password = PasswordHasher.hash_password(password_data.new_password)
 
