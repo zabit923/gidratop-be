@@ -570,6 +570,11 @@ def start_infrastructure():
         print(f"🔍 PgAdmin:           http://localhost:{ports['PGADMIN']}")
         print(f"📊 Redis Commander:    http://localhost:{ports['REDIS_COMMANDER']}")
 
+        print("\n🔑 Данные для входа:")
+        print(f"🔍 PgAdmin:           {env_vars.get('PGADMIN_DEFAULT_EMAIL', 'admin@admin.com')} / {env_vars.get('PGADMIN_DEFAULT_PASSWORD', 'admin')}")
+        print(f"🐰 RabbitMQ:          {env_vars.get('RABBITMQ_USER', 'guest')} / {env_vars.get('RABBITMQ_PASS', 'guest')}")
+        print(f"🗄️ PostgreSQL:        {env_vars.get('POSTGRES_USER', 'postgres')} / {env_vars.get('POSTGRES_PASSWORD', 'postgres')}")
+
         print("✅ Инфраструктура готова!")
         return True
     except DockerDaemonNotRunningError as e:
