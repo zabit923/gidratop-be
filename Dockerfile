@@ -16,8 +16,8 @@ RUN apk add --no-cache --virtual .build-deps \
 
 # PostgreSQL компоненты
 RUN apk add --no-cache \
-    postgresql-dev \
-    postgresql-client
+    postgresql16-dev \
+    postgresql16-client
 
 # Дополнительные утилиты
 RUN apk add --no-cache poppler-utils
