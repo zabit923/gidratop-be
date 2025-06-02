@@ -194,6 +194,28 @@ class Settings(BaseSettings):
             "exchange": self.RABBITMQ_EXCHANGE,
         }
 
+    # Настройки AWS
+    AWS_SERVICE_NAME: str = "s3"
+    AWS_REGION: str = "ru-central1"
+    AWS_ENDPOINT: str = "https://storage.yandexcloud.net"
+    AWS_BUCKET_NAME: str = "store.data"
+    AWS_ACCESS_KEY_ID: SecretStr
+    AWS_SECRET_ACCESS_KEY: SecretStr
+
+    @property
+    def s3_params(self) -> Dict[str, Any]:
+        """
+        Формирует информацию о конфигурации S3.
+        """
+        return {
+            "service_name": self.AWS_SERVICE_NAME,
+            "aws_region": self.AWS_REGION,
+            "aws_endpoint": self.AWS_ENDPOINT,
+            "aws_bucket_name": self.AWS_BUCKET_NAME,
+            "aws_access_key_id": self.AWS_ACCESS_KEY_ID,
+            "aws_secret_access_key": self.AWS_SECRET_ACCESS_KEY,
+        }
+
     # Настройки почты
     VERIFICATION_URL: str = "https://api.gidrator.ru/api/v1/register/verify-email/"
     PASSWORD_RESET_URL: str = "https://api.gidrator.ru/api/v1/auth/reset-password/"

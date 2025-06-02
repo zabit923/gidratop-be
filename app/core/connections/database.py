@@ -5,8 +5,6 @@
 с использованием глобальной фабрики сессий для оптимальной производительности.
 """
 
-from typing import AsyncGenerator
-
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
                                     async_sessionmaker, create_async_engine)
@@ -92,34 +90,3 @@ class DatabaseClient(BaseClient):
                 "Вызовите connect() перед использованием."
             )
         return self._session_factory
-
-
-# Глобальный экземпляр клиента
-database_client = DatabaseClient()
-
-
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency для получения сессии базы данных в FastAPI.
-
-    Yields:
-        AsyncSession: Асинхронная сессия SQLAlchemy
-
-    Usage:
-        ```python
-        @router.post("/users/")
-        async def create_user(
-            user_data: UserCreate,
-            session: AsyncSession = Depends(get_db_session)
-        ):
-            # Работа с сессией
-        ```
-    """
-    session_factory = database_client.get_session_factory()
-
-    async with session_factory() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise
