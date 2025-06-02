@@ -32,7 +32,8 @@ import time
 import socket
 import platform
 import uvicorn
-
+import threading
+import sys
 
 class DockerDaemonNotRunningError(Exception):
     """
@@ -135,13 +136,15 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
     if env:
         environment.update(env)
 
+    show_output = any(cmd in command for cmd in ['up', 'build'])
+
     try:
         subprocess.run(
             ["docker-compose", "-f", compose_file] + command,
             cwd=ROOT_DIR,
             check=True,
             env=environment,
-            capture_output=True,
+            capture_output=not show_output,
             text=True
         )
     except subprocess.CalledProcessError as e:
@@ -246,7 +249,25 @@ def get_port(service: str) -> int:
     service_upper = service.upper().replace('_PORT', '')
     return int(os.getenv(service, DEFAULT_PORTS[service_upper]))
 
-def check_service(name: str, port: int, retries: int = 5, delay: int = 2) -> bool:
+def show_loader(message: str, stop_event: threading.Event):
+    """
+    Показывает анимированный loader
+
+    Args:
+        message: Сообщение для отображения
+        stop_event: Событие для остановки анимации
+    """
+    chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    i = 0
+    while not stop_event.is_set():
+        sys.stdout.write(f'\r{chars[i % len(chars)]} {message}')
+        sys.stdout.flush()
+        time.sleep(0.1)
+        i += 1
+    sys.stdout.write('\r' + ' ' * (len(message) + 2) + '\r')
+    sys.stdout.flush()
+
+def check_service(name: str, port: int, retries: int = 10, delay: int = 3) -> bool:
     """
     Проверяет доступность сервиса через TCP подключение.
 
@@ -289,7 +310,7 @@ def check_services():
     """
     services_config = {
         'Redis': ('REDIS_PORT', 5),
-        'RabbitMQ': ('RABBITMQ_UI_PORT', 5),
+        'RabbitMQ': ('RABBITMQ_UI_PORT', 20),
         'PostgreSQL': ('POSTGRES_PORT', 30),
     }
 
@@ -539,6 +560,10 @@ def start_infrastructure():
             f"{service}_PORT": str(port)
             for service, port in ports.items()
         }
+        # Запуск контейнеров с loader
+        stop_loader = threading.Event()
+        loader_thread = threading.Thread(target=show_loader, args=("Запускаем контейнеры...", stop_loader))
+        loader_thread.start()
 
         try:
             run_compose_command(["up", "-d"], COMPOSE_FILE_WITHOUT_BACKEND, env=env)
@@ -553,6 +578,10 @@ def start_infrastructure():
                 container_name = container_match.group(1) if container_match else None
                 raise DockerContainerConflictError(container_name)
             raise
+        finally:
+            stop_loader.set()
+            loader_thread.join()
+            print("✅ Контейнеры запущены!")
 
         # Ждем доступности сервисов
         check_services()
@@ -562,20 +591,25 @@ def start_infrastructure():
         migrate()
         print("✅ Миграции выполнены!")
 
-        print("\n🔗 Доступные адреса:")
+        print("\n" + "="*60)
+        print("🎯 ИНФРАСТРУКТУРА ГОТОВА")
+        print("="*60)
+
+        print("\n📡 СЕРВИСЫ:")
         print(f"📊 FastAPI Swagger:    http://localhost:{ports['FASTAPI']}/docs")
-        print(f"🐰 RabbitMQ UI:       http://localhost:{ports['RABBITMQ_UI']}")
+        print(f"🐰 RabbitMQ:       http://localhost:{ports['RABBITMQ_UI']}")
         print(f"🗄️ PostgreSQL:        localhost:{ports['POSTGRES']}")
         print(f"📦 Redis:             localhost:{ports['REDIS']}")
+
+        print("\n🔧 АДМИН ПАНЕЛИ:")
         print(f"🔍 PgAdmin:           http://localhost:{ports['PGADMIN']}")
         print(f"📊 Redis Commander:    http://localhost:{ports['REDIS_COMMANDER']}")
 
-        print("\n🔑 Данные для входа:")
+        print("\n🔑 ДОСТУПЫ:")
         print(f"🔍 PgAdmin:           {env_vars.get('PGADMIN_DEFAULT_EMAIL', 'admin@admin.com')} / {env_vars.get('PGADMIN_DEFAULT_PASSWORD', 'admin')}")
         print(f"🐰 RabbitMQ:          {env_vars.get('RABBITMQ_USER', 'guest')} / {env_vars.get('RABBITMQ_PASS', 'guest')}")
         print(f"🗄️ PostgreSQL:        {env_vars.get('POSTGRES_USER', 'postgres')} / {env_vars.get('POSTGRES_PASSWORD', 'postgres')}")
 
-        print("✅ Инфраструктура готова!")
         return True
     except DockerDaemonNotRunningError as e:
         print(f"❌ {e}")
@@ -654,7 +688,14 @@ def dev(port: Optional[int] = None):
         port = find_free_port()
 
 
-    print(f"🚀 Запускаем сервер на порту {port}")
+    print("\n" + "="*60)
+    print("🚀 ЗАПУСК FASTAPI СЕРВЕРА")
+    print("="*60)
+    print(f"🌐 Адрес: http://localhost:{port}")
+    print(f"📚 Документация: http://localhost:{port}/docs")
+    print(f"🔄 Hot Reload: включён")
+    print("="*60 + "\n")
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
