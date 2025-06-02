@@ -270,7 +270,7 @@ class AuthRouter(BaseRouter):
             },
         )
         async def forgot_password(
-            forgot_data: ForgotPasswordSchema,
+            request: ForgotPasswordSchema,
             session: AsyncSession = Depends(get_db_session),
             redis: Optional[Redis] = Depends(get_redis_client),
         ) -> PasswordResetResponseSchema:
@@ -295,7 +295,7 @@ class AuthRouter(BaseRouter):
             * Одноразовые токены для сброса пароля
             """
             return await AuthService(session, redis).send_password_reset_email(
-                forgot_data
+                request.email
             )
 
         @self.router.post(
