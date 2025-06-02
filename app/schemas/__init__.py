@@ -28,7 +28,8 @@ from .v1.users import (CurrentUserSchema, UserCredentialsSchema,
                        UserNotFoundResponseSchema, UserPrivateSchema,
                        UserProfileSchema, UserPublicSchema, UserSchema,
                        UserStatusDataSchema, ForbiddenResponseSchema)
-
+from .v1.profile import (PasswordFormSchema, PasswordUpdateResponseSchema,
+                         ProfileResponseSchema, ProfileSchema, ProfileUpdateSchema)
 __all__ = [
     # Errors
     "RateLimitErrorSchema",
@@ -94,4 +95,13 @@ __all__ = [
     "PasswordResetEmailSchema",
     "RegistrationSuccessEmailSchema",
     "VerificationEmailSchema",
+    # Profile
+    "ProfileSchema",
+    "ProfileUpdateSchema",
+    "PasswordFormSchema",
+    "ProfileResponseSchema",
+    "PasswordUpdateResponseSchema",
+    "ProfileNotFoundResponseSchema",
+    "UserNotFoundResponseSchema",
+    "InvalidCurrentPasswordResponseSchema"
 ]

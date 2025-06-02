@@ -3,7 +3,7 @@ from app.routes.v1.auth import AuthRouter
 from app.routes.v1.registration import RegisterRouter
 from app.routes.v1.users import UserRouter
 from app.routes.v1.verification import VerificationRouter
-
+from app.routes.v1.profile import ProfileRouter
 
 class APIv1(BaseRouter):
     def configure_routes(self):
@@ -11,5 +11,4 @@ class APIv1(BaseRouter):
         self.router.include_router(AuthRouter().get_router())
         self.router.include_router(VerificationRouter().get_router())
         self.router.include_router(UserRouter().get_router())
-        # self.router.include_router(OAuthRouter().get_router())
-        # self.router.include_router(ProfileRouter().get_router())
+        self.router.include_router(ProfileRouter().get_router())
