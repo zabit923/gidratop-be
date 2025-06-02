@@ -136,7 +136,7 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
     if env:
         environment.update(env)
 
-    show_output = any(cmd in command for cmd in ['up', 'build'])
+    # show_output = any(cmd in command for cmd in ['up', 'build'])
 
     try:
         subprocess.run(
@@ -144,7 +144,7 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
             cwd=ROOT_DIR,
             check=True,
             env=environment,
-            capture_output=not show_output,
+            # capture_output=not show_output,
             text=True
         )
     except subprocess.CalledProcessError as e:
@@ -562,7 +562,7 @@ def start_infrastructure():
         }
         # Запуск контейнеров с loader
         stop_loader = threading.Event()
-        loader_thread = threading.Thread(target=show_loader, args=("Запускаем контейнеры...", stop_loader))
+        loader_thread = threading.Thread(target=show_loader, args=("", stop_loader))
         loader_thread.start()
 
         try:
