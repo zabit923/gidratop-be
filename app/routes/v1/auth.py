@@ -23,8 +23,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import TokenMissingError
-from app.core.dependenices.cache import get_redis_client
-from app.core.dependenices.database import get_db_session
+from app.core.dependencies import get_db_session, get_redis_client
 from app.routes.base import BaseRouter
 from app.schemas import (ForgotPasswordSchema,
                          InvalidCredentialsResponseSchema,

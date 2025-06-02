@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
                                     async_sessionmaker, create_async_engine)
 
-from app.core.connections.base import BaseClient
+from app.core.connections import BaseClient
 from app.core.settings import Config, settings
 
 

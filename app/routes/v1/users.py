@@ -16,8 +16,7 @@ from fastapi import Depends, Query
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependenices.cache import get_redis_client
-from app.core.dependenices.database import get_db_session
+from app.core.dependencies import get_db_session, get_redis_client
 from app.core.security.auth import get_current_user
 from app.models import UserRole
 from app.routes.base import BaseRouter

@@ -57,6 +57,14 @@ cp .env.example .env.dev
 - `SMTP_PASSWORD` - пароль SMTP
 - `SMTP_PORT` - порт SMTP (по умолчанию 587)
 
+### Настройки AWS S3
+- `AWS_SERVICE_NAME` - имя сервиса AWS (s3)
+- `AWS_REGION` - регион AWS (ru-central1)
+- `AWS_ENDPOINT` - endpoint AWS (https://storage.yandexcloud.net)
+- `AWS_BUCKET_NAME` - имя бакета AWS
+- `AWS_ACCESS_KEY_ID` - ключ доступа AWS
+- `AWS_SECRET_ACCESS_KEY` - секретный ключ доступа AWS
+
 ### Настройки CORS
 - `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["*"])
 
@@ -104,6 +112,14 @@ RABBITMQ_PASS=guest
 RABBITMQ_PORT=5672
 RABBITMQ_HOST=localhost
 RABBITMQ_EXCHANGE=gidrator
+
+# AWS S3
+AWS_SERVICE_NAME=s3
+AWS_REGION=ru-central1
+AWS_ENDPOINT=https://storage.yandexcloud.net
+AWS_BUCKET_NAME=your_bucket_name
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
 
 # Настройки CORS
 ALLOW_ORIGINS=["*"]

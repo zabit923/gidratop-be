@@ -1,6 +1,7 @@
 [project]
 dependencies = [
   "aio-pika>=9.5.5",
+  "aioboto3==13.1",
   "alembic>=1.16.1",
   "argon2-cffi>=23.1.0",
   "asyncpg>=0.30.0",
@@ -75,4 +76,5 @@ requires = ["setuptools>=61.0"]
 disable = [
   "unsubscriptable-object",
   "not-callable",
+  "no-member",
 ]

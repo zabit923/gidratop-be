@@ -1,23 +1,37 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, TypeVar
+from app.core.connections import BaseClient, BaseContextManager
 
 T = TypeVar('T')
 
 @asynccontextmanager
-async def managed_client(client_factory) -> AsyncGenerator[T, None]:
+async def managed_client(client: BaseClient) -> AsyncGenerator[T, None]:
     """
-    Универсальный контекстный менеджер для клиентов
+    Универсальный контекстный менеджер для BaseClient.
 
-    !TODO: зайдействовать
+    Args:
+        client: Экземпляр BaseClient
+
+    Yields:
+        T: Подключенный клиент
     """
-    client = None
+    connection = None
     try:
-        client = await client_factory()
-        yield client
-    except Exception:
-        if hasattr(client, 'rollback'):
-            await client.rollback()
-        raise
+        connection = await client.connect()
+        yield connection
     finally:
-        if hasattr(client, 'close'):
-            await client.close()
+        await client.close()
+
+@asynccontextmanager
+async def managed_context(context_manager: BaseContextManager) -> AsyncGenerator[T, None]:
+    """
+    Обёртка для BaseContextManager.
+
+    Args:
+        context_manager: Экземпляр BaseContextManager
+
+    Yields:
+        T: Подключенный клиент
+    """
+    async with context_manager as connection:
+        yield connection
