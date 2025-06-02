@@ -8,13 +8,19 @@ ENV PYTHONUNBUFFERED=1
 RUN apk update
 
 # Устанавливаем зависимости для сборки (libpq-dev исключен, так как включен в postgresql-dev)
+# Базовые инструменты сборки
 RUN apk add --no-cache --virtual .build-deps \
     gcc \
     python3-dev \
-    musl-dev \
+    musl-dev
+
+# PostgreSQL компоненты
+RUN apk add --no-cache \
     postgresql-dev \
-    postgresql-client \
-    poppler-utils
+    postgresql-client
+
+# Дополнительные утилиты
+RUN apk add --no-cache poppler-utils
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
