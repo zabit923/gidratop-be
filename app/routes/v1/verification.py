@@ -147,13 +147,10 @@ class VerificationRouter(BaseRouter):
             ### Returns:
             * Статус отправки письма
             """
-            result = await RegisterService(session, redis).resend_verification_email(
+            return await RegisterService(session, redis).resend_verification_email(
                 request.email
             )
-            return ResendVerificationResponseSchema(
-                email=request.email,
-                message=result.get("message", "Письмо верификации отправлено"),
-            )
+
 
         @self.router.get(
             path="/status/{email}",
