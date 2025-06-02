@@ -1,5 +1,46 @@
 # Gidrator
 
+## 🛠️ Технологический стек
+
+#### Управление зависимостями
+[![uv](https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=python&logoColor=white)](https://docs.astral.sh/uv/)
+
+#### Backend
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Uvicorn](https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=gunicorn&logoColor=white)](https://www.uvicorn.org/)
+
+#### База данных
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/docs/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/docs/)
+[![Alembic](https://img.shields.io/badge/Alembic-6BA81E?style=for-the-badge&logo=sqlalchemy&logoColor=white)](https://alembic.sqlalchemy.org/)
+
+#### Очереди и сообщения, стриминг
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/docs)
+[![FastStream](https://img.shields.io/badge/FastStream-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://faststream.airt.ai/)
+
+#### Инфраструктура
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/)
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+
+#### Инструменты разработки
+[![pgAdmin](https://img.shields.io/badge/pgAdmin-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.pgadmin.org/docs/)
+[![Redis Commander](https://img.shields.io/badge/Redis_Commander-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://github.com/joeferner/redis-commander)
+
+#### Облачные сервисы
+[![Yandex Cloud](https://img.shields.io/badge/Yandex_Cloud-5282FF?style=for-the-badge&logo=yandex&logoColor=white)](https://yandex.cloud/docs/)
+[![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white)](https://docs.aws.amazon.com/s3/)
+
+#### Безопасность и аутентификация
+[![Argon2](https://img.shields.io/badge/Argon2-000000?style=for-the-badge&logo=security&logoColor=white)](https://argon2-cffi.readthedocs.io/)
+[![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://pyjwt.readthedocs.io/)
+
+#### Качество кода
+[![Black](https://img.shields.io/badge/Black-000000?style=for-the-badge&logo=python&logoColor=white)](https://black.readthedocs.io/)
+[![MyPy](https://img.shields.io/badge/MyPy-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://mypy.readthedocs.io/)
+[![Flake8](https://img.shields.io/badge/Flake8-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://flake8.pycqa.org/)
+[![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org/)
+
 ## Установка
 
 Клонируйте репозиторий в директорию, в которой находитесь:
@@ -41,6 +82,10 @@ cp .env.example .env.dev
 - `POSTGRES_PORT` - порт PostgreSQL (по умолчанию 5432)
 - `POSTGRES_DB` - имя базы данных
 
+### Настройки pgAdmin
+- `PGADMIN_DEFAULT_EMAIL` - email пользователя pgAdmin
+- `PGADMIN_DEFAULT_PASSWORD` - пароль пользователя pgAdmin
+
 ### Настройки Redis
 - `REDIS_PASSWORD` - пароль для Redis
 - `REDIS_PORT` - порт Redis (по умолчанию 6379)
@@ -81,6 +126,7 @@ cp .env.example .env.dev
 - `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["http://localhost:3000","http://localhost:5173"])
 
 ### Пример минимальной конфигурации для локальной разработки
+```
 # Настройки логирования
 LOGGING__LOG_FORMAT=pretty
 LOGGING__LOG_FILE=./logs/app.log
@@ -105,6 +151,10 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5433
 POSTGRES_DB=gidrator_db
+
+# Настройки pgAdmin
+PGADMIN_DEFAULT_EMAIL=admin@admin.com
+PGADMIN_DEFAULT_PASSWORD=admin
 
 # RabbitMQ
 RABBITMQ_USER=guest
@@ -134,7 +184,8 @@ ALLOW_HEADERS=["*"]
 > - Обязательно замените `TOKEN_SECRET_KEY` на уникальный секретный ключ!
 
 ## Первый запуск
-
+> [!IMPORTANT]
+> Перед использованием этих команд uv должен быть установлен
 ```bash
 uv run activate
 ```
@@ -165,7 +216,7 @@ uv run activate
 - Разработка идёт от `development`
 - В `development` мерджим фичи
 - Тестим на `development`
-- Когда всё ок - мерджим `development` в main
+- Когда всё ок - мерджим `development` в `main`
 
 Если вы хотите внести изменения или улучшения, пожалуйста, следуйте этим шагам:
 
