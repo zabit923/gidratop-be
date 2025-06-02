@@ -14,10 +14,10 @@ RUN apk add --no-cache --virtual .build-deps \
     python3-dev \
     musl-dev
 
-# PostgreSQL компоненты
+# PostgreSQL без dev пакетов (избегаем LLVM)
 RUN apk add --no-cache \
-    postgresql16-dev \
-    postgresql16-client
+    libpq-dev \
+    postgresql-client
 
 # Дополнительные утилиты
 RUN apk add --no-cache poppler-utils
