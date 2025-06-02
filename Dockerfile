@@ -13,7 +13,6 @@ RUN apk add --no-cache --virtual .build-deps \
     musl-dev \
     postgresql-dev \
     postgresql-client \
-    libpq-dev \
     poppler-utils
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
