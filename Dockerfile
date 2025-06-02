@@ -7,6 +7,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apk update
 
+# Устанавливаем зависимости для сборки (libpq-dev исключен, так как включен в postgresql-dev)
 RUN apk add --no-cache --virtual .build-deps \
     gcc \
     python3-dev \
