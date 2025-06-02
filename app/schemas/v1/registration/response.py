@@ -5,13 +5,13 @@
 Все схемы следуют единому формату: {success, message, data}.
 """
 
-from app.schemas.v1.base import BaseResponseSchema, ItemResponseSchema
+from app.schemas.v1.base import BaseResponseSchema
 
 from .base import (RegistrationDataSchema, ResendVerificationDataSchema,
                    VerificationDataSchema, VerificationStatusDataSchema)
 
 
-class RegistrationResponseSchema(ItemResponseSchema[RegistrationDataSchema]):
+class RegistrationResponseSchema(BaseResponseSchema):
     """
     Схема полного ответа API при успешной регистрации пользователя.
 
