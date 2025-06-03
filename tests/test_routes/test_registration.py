@@ -1,8 +1,7 @@
 """Тесты для роутера регистрации пользователей."""
 import pytest
 from httpx import AsyncClient
-from unittest.mock import AsyncMock, patch
-from app.schemas import RegistrationRequestSchema
+from unittest.mock import patch
 from tests.utils import create_test_user_data, assert_response_structure
 
 

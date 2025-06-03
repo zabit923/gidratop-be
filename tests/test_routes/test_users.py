@@ -1,7 +1,7 @@
 """Тесты для роутера пользователей."""
 import pytest
 from httpx import AsyncClient
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 from app.models import UserRole
 from tests.utils import create_test_user_data, assert_response_structure, create_authenticated_client
 

@@ -5,9 +5,9 @@
 import asyncio
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
@@ -81,10 +81,8 @@ async def client(db_session):
     
     app.dependency_overrides[get_db_session] = override_get_db
     
-    async with AsyncClient(app=app, base_url="http://localhost") as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as ac:
         yield ac
-    
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture(autouse=True)

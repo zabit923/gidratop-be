@@ -2,7 +2,6 @@
 Утилиты для тестов.
 """
 from typing import Dict, Any
-import json
 
 
 def create_test_user_data() -> Dict[str, Any]:
