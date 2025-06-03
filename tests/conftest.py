@@ -11,8 +11,7 @@ from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.core.connections.database import database_client
-from app.dependencies import get_db_session
+from app.core.dependencies import get_db_session, database_client
 from app.core.settings import settings
 
 
@@ -29,7 +28,7 @@ async def test_engine():
     """Создает тестовый движок базы данных."""
     # Используем in-memory SQLite для тестов или отдельную тестовую БД
     test_database_url = settings.database_url.replace(
-        settings.postgres_db, f"{settings.postgres_db}_test"
+        settings.POSTGRES_DB, f"{settings.POSTGRES_DB}"
     )
     
     engine = create_async_engine(
