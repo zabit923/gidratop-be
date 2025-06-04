@@ -35,7 +35,7 @@ async def test_engine():
         test_database_url,
         poolclass=StaticPool,
         connect_args={"check_same_thread": False} if "sqlite" in test_database_url else {},
-        echo=True,
+        echo=False,
     )
     
     yield engine
@@ -68,9 +68,15 @@ async def test_session_factory(test_engine):
 async def db_session(test_session_factory):
     """Создает сессию БД для каждого теста."""
     async with test_session_factory() as session:
-        yield session
-        await session.rollback()
-
+        # Начинаем транзакцию
+        transaction = await session.begin()
+        
+        try:
+            yield session
+        finally:
+            # Откатываем транзакцию после каждого теста
+            await transaction.rollback()
+            await session.close()
 
 @pytest_asyncio.fixture
 async def client(db_session):
@@ -79,10 +85,18 @@ async def client(db_session):
     async def override_get_db():
         yield db_session
     
+    # Переопределяем зависимость
     app.dependency_overrides[get_db_session] = override_get_db
     
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as ac:
-        yield ac
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), 
+            base_url="http://localhost"
+        ) as ac:
+            yield ac
+    finally:
+        # Очищаем переопределения после теста
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture(autouse=True)
