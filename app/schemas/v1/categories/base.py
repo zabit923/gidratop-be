@@ -1,11 +1,11 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import Field
 
 from app.schemas import BaseSchema
 
 if TYPE_CHECKING:
-    from app.schemas.v1 import ProductDataSchema
+    pass
 
 
 class CategoryDataSchema(BaseSchema):
@@ -33,6 +33,8 @@ class CategoryDataSchema(BaseSchema):
             "Книги разных жанров",
         ],
     )
-    parent: Optional["CategoryDataSchema"]
-    children: Optional[List["CategoryDataSchema"]]
-    products: Optional[List["ProductDataSchema"]]
+    parent_id: Optional[int] = Field(
+        default=None,
+        description="ID родительской категории",
+        examples=[1, 2, None],
+    )

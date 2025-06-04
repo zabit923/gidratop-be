@@ -30,9 +30,12 @@ class Category(BaseModel):
     parent_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=True)
 
     parent: Mapped["Category"] = relationship(
-        "Category", remote_side=[id], back_populates="children", lazy="selectin"
+        "Category",
+        remote_side="Category.id",
+        back_populates="children",
+        lazy="selectin",
     )
-    children: Mapped[list["Category"]] = relationship(
+    children: Mapped[List["Category"]] = relationship(
         "Category",
         back_populates="parent",
         lazy="selectin",

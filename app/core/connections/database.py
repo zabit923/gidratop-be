@@ -8,8 +8,12 @@
 from typing import AsyncGenerator
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
-                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.core.connections.base import BaseClient
 from app.core.settings import Config, settings
@@ -92,6 +96,27 @@ class DatabaseClient(BaseClient):
                 "Вызовите connect() перед использованием."
             )
         return self._session_factory
+
+    def get_engine(self) -> AsyncEngine:
+        """
+        Получение текущего движка базы данных.
+
+        Returns:
+            AsyncEngine: асинхронный движок SQLAlchemy
+
+        Raises:
+            RuntimeError: если движок еще не инициализирован (connect не вызывался)
+        """
+        self._engine = create_async_engine(
+            url=self._config.database_url, **self._config.engine_params
+        )
+
+        if self._engine is None:
+            raise RuntimeError(
+                "База данных не инициализирована. "
+                "Вызовите connect() перед использованием."
+            )
+        return self._engine
 
 
 # Глобальный экземпляр клиента

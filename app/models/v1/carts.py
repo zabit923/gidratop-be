@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -24,6 +24,11 @@ class Cart(BaseModel):
     user: Mapped["UserModel"] = relationship(
         "UserModel", foreign_keys=[user_id], back_populates="cart"
     )
+    items: Mapped[List["CartItem"]] = relationship(
+        "CartItem",
+        back_populates="cart",
+        lazy="selectin",
+    )
 
 
 class CartItem(BaseModel):
@@ -46,13 +51,13 @@ class CartItem(BaseModel):
     quantity: Mapped[int] = mapped_column(nullable=False, default=1)
 
     cart: Mapped["Cart"] = relationship(
-        "CartModel",
+        "Cart",
         foreign_keys=[cart_id],
         back_populates="items",
         lazy="selectin",
     )
     product: Mapped["Product"] = relationship(
-        "ProductModel",
+        "Product",
         foreign_keys=[product_id],
         back_populates="items",
         lazy="selectin",

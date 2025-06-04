@@ -1,8 +1,18 @@
-from .auth import (AuthenticationError, InvalidCredentialsError,
-                   InvalidCurrentPasswordError, InvalidEmailFormatError,
-                   InvalidPasswordError, TokenError, TokenExpiredError,
-                   TokenInvalidError, TokenMissingError, WeakPasswordError)
+from .auth import (
+    AuthenticationError,
+    InvalidCredentialsError,
+    InvalidCurrentPasswordError,
+    InvalidEmailFormatError,
+    InvalidPasswordError,
+    TokenError,
+    TokenExpiredError,
+    TokenInvalidError,
+    TokenMissingError,
+    WeakPasswordError,
+)
 from .base import BaseAPIException
+from .categories import CategoryAlreadyExistsError, CategoryNotFoundError
+from .users import ForbiddenError, UserCreationError, UserExistsError, UserNotFoundError
 
 __all__ = [
     "BaseAPIException",
@@ -16,4 +26,10 @@ __all__ = [
     "TokenMissingError",
     "TokenExpiredError",
     "TokenInvalidError",
+    "ForbiddenError",
+    "UserNotFoundError",
+    "UserCreationError",
+    "UserExistsError",
+    "CategoryNotFoundError",
+    "CategoryAlreadyExistsError",
 ]

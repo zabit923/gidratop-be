@@ -36,12 +36,12 @@ COMPOSE_FILE_WITHOUT_BACKEND = "docker-compose.dev.yml"
 
 DEFAULT_PORTS = {
     'FASTAPI': 8000,
-    # 'RABBITMQ': 5672,      # Порт для AMQP
-    # 'RABBITMQ_UI': 15672,  # Порт для веб-интерфейса
+    'RABBITMQ': 5672,      # Порт для AMQP
+    'RABBITMQ_UI': 15672,  # Порт для веб-интерфейса
     'POSTGRES': 5432,
-    # 'REDIS': 6379,
+    'REDIS': 6379,
     'PGADMIN': 5050,
-    # 'REDIS_COMMANDER': 8081,
+    'REDIS_COMMANDER': 8081,
 }
 def load_env_vars(env_file_path: str = None) -> dict:
     """
@@ -182,8 +182,8 @@ def check_service(name: str, port: int, retries: int = 5, delay: int = 2) -> boo
 def check_services():
     """Проверяет доступность всех сервисов"""
     services_config = {
-        # 'Redis': ('REDIS_PORT', 5),
-        # 'RabbitMQ': ('RABBITMQ_UI_PORT', 5),
+        'Redis': ('REDIS_PORT', 5),
+        'RabbitMQ': ('RABBITMQ_UI_PORT', 5),
         'PostgreSQL': ('POSTGRES_PORT', 30),
     }
 
@@ -417,11 +417,11 @@ def start_infrastructure():
 
         print("\n🔗 Доступные адреса:")
         print(f"📊 FastAPI Swagger:    http://localhost:{ports['FASTAPI']}/docs")
-        # print(f"🐰 RabbitMQ UI:       http://localhost:{ports['RABBITMQ_UI']}")
+        print(f"🐰 RabbitMQ UI:       http://localhost:{ports['RABBITMQ_UI']}")
         print(f"🗄️ PostgreSQL:        localhost:{ports['POSTGRES']}")
-        # print(f"📦 Redis:             localhost:{ports['REDIS']}")
+        print(f"📦 Redis:             localhost:{ports['REDIS']}")
         print(f"🔍 PgAdmin:           http://localhost:{ports['PGADMIN']}")
-        # print(f"📊 Redis Commander:    http://localhost:{ports['REDIS_COMMANDER']}")
+        print(f"📊 Redis Commander:    http://localhost:{ports['REDIS_COMMANDER']}")
 
         print("✅ Инфраструктура готова!")
         return True
