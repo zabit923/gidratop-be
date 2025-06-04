@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.core.connections.database import database_client
+from app.core.dependencies import database_client
 from app.core.lifespan.base import (register_shutdown_handler,
                                     register_startup_handler)
 

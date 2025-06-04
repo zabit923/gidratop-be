@@ -5,7 +5,7 @@
 при возникновении различных ошибок при работе с пользователями.
 """
 
-from pydantic import  Field
+from pydantic import Field
 
 from app.schemas.v1.base import ErrorResponseSchema, ErrorSchema
 

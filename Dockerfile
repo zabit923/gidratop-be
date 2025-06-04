@@ -7,14 +7,16 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apk update
 
-RUN apk add --no-cache --virtual .build-deps \
-    gcc \
-    python3-dev \
-    musl-dev \
-    postgresql-dev \
-    postgresql-client \
-    libpq-dev \
-    poppler-utils
+# Базовые инструменты сборки
+RUN apk add --no-cache gcc || echo "gcc failed"
+RUN apk add --no-cache musl-dev || echo "musl-dev failed"
+
+# PostgreSQL пакеты
+RUN apk add --no-cache postgresql-dev || echo "postgresql-dev failed"
+RUN apk add --no-cache postgresql-client || echo "postgresql-client failed"
+
+# Дополнительные утилиты
+RUN apk add --no-cache poppler-utils || echo "poppler-utils failed"
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 

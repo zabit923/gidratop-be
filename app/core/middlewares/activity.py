@@ -5,7 +5,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from app.core.connections.cache import RedisClient
+from app.core.connections import RedisClient
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.settings import settings
 

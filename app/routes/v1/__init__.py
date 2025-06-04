@@ -1,7 +1,9 @@
 from app.routes.base import BaseRouter
 from app.routes.v1.auth import AuthRouter
 from app.routes.v1.categories import CategoryRouter
+from app.routes.v1.profile import ProfileRouter
 from app.routes.v1.registration import RegisterRouter
+from app.routes.v1.users import UserRouter
 from app.routes.v1.verification import VerificationRouter
 
 
@@ -14,3 +16,5 @@ class APIv1(BaseRouter):
         # self.router.include_router(OAuthRouter().get_router())
         # self.router.include_router(UserRouter().get_router())
         # self.router.include_router(ProfileRouter().get_router())
+        self.router.include_router(UserRouter().get_router())
+        self.router.include_router(ProfileRouter().get_router())

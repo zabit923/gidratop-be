@@ -24,7 +24,7 @@ class TokenManager:
     Класс для работы с JWT токенами.
 
     Предоставляет статические методы для генерации, проверки и валидации токенов.
-    Поддерживает как access, так и refresh токены.
+    Поддерживает access, refresh, verification и password reset токены.
     """
 
     @staticmethod
@@ -103,7 +103,9 @@ class TokenManager:
         return current_timestamp > expires_at
 
     @staticmethod
-    def validate_token_payload(payload: dict, expected_type: Optional[str] = None) -> dict:
+    def validate_token_payload(
+        payload: dict, expected_type: Optional[str] = None
+    ) -> dict:
         """
         Универсальная валидация payload токена.
 
@@ -124,7 +126,7 @@ class TokenManager:
             if token_type != expected_type:
                 logger.warning(
                     "Неверный тип токена",
-                    extra={"expected": expected_type, "actual": token_type}
+                    extra={"expected": expected_type, "actual": token_type},
                 )
                 raise TokenInvalidError(f"Ожидался тип токена: {expected_type}")
 
@@ -169,9 +171,9 @@ class TokenManager:
             int: Количество секунд до истечения токена
 
         Example:
-            15 минут * 60 = 900 секунд
+            30 минут * 60 = 1800 секунд
         """
-        return settings.TOKEN_EXPIRE_MINUTES * 60
+        return settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
     @staticmethod
     def validate_payload(payload: dict) -> str:
@@ -195,7 +197,6 @@ class TokenManager:
             raise InvalidCredentialsError()
 
         return email
-
 
     # Методы refresh токена
 
@@ -309,7 +310,7 @@ class TokenManager:
             "type": "password_reset",
             "expires_at": (
                 int(datetime.now(timezone.utc).timestamp())
-                + 1800  # 30 минут (в секундах)
+                + settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES * 60
             ),
         }
         return TokenManager.generate_token(payload)
@@ -370,3 +371,171 @@ class TokenManager:
             raise TokenMissingError()
 
         return token
+
+    @staticmethod
+    def create_limited_token(user_schema: Any) -> str:
+        """
+        Создает ограниченный токен для неверифицированных пользователей.
+
+        Ограниченный токен содержит флаг 'limited', который указывает на то,
+        что пользователь не прошел верификацию email и имеет ограниченный доступ.
+
+        Args:
+            user_schema: Схема пользователя с данными для токена
+
+        Returns:
+            str: Сгенерированный ограниченный JWT токен
+
+        Example:
+            ```python
+            user = UserCredentialsSchema(...)
+            limited_token = TokenManager.create_limited_token(user)
+            # Токен будет содержать: {"limited": True, ...}
+            ```
+        """
+        payload = TokenManager.create_payload(user_schema)
+        payload["limited"] = not user_schema.is_verified  # True если не верифицирован
+
+        logger.debug(
+            "Создан ограниченный токен",
+            extra={
+                "user_id": user_schema.id,
+                "is_verified": user_schema.is_verified,
+                "limited": payload["limited"],
+            },
+        )
+
+        return TokenManager.generate_token(payload)
+
+    @staticmethod
+    def create_full_token(user_schema: Any) -> str:
+        """
+        Создает полный токен для верифицированных пользователей.
+
+        Полный токен не содержит ограничений и предоставляет доступ
+        ко всем функциям системы.
+
+        Args:
+            user_schema: Схема верифицированного пользователя
+
+        Returns:
+            str: Сгенерированный полный JWT токен
+
+        Example:
+            ```python
+            verified_user = UserCredentialsSchema(is_verified=True, ...)
+            full_token = TokenManager.create_full_token(verified_user)
+            # Токен будет содержать: {"limited": False, ...}
+            ```
+        """
+        payload = TokenManager.create_payload(user_schema)
+        payload["limited"] = False  # Явно указываем отсутствие ограничений
+
+        logger.debug(
+            "Создан полный токен",
+            extra={
+                "user_id": user_schema.id,
+                "is_verified": user_schema.is_verified,
+                "limited": False,
+            },
+        )
+
+        return TokenManager.generate_token(payload)
+
+    @staticmethod
+    def create_refresh_token(user_id: int) -> str:
+        """
+        Создает refresh токен для пользователя.
+
+        Refresh токен используется для обновления access токенов без
+        повторной аутентификации пользователя.
+
+        Args:
+            user_id: ID пользователя
+
+        Returns:
+            str: Сгенерированный refresh JWT токен
+
+        Example:
+            ```python
+            refresh_token = TokenManager.create_refresh_token(123)
+            # Токен будет содержать: {"type": "refresh", "sub": "123", ...}
+            ```
+        """
+        payload = TokenManager.create_refresh_payload(user_id)
+
+        logger.debug("Создан refresh токен", extra={"user_id": user_id})
+
+        return TokenManager.generate_token(payload)
+
+    @staticmethod
+    def is_token_limited(payload: dict) -> bool:
+        """
+        !Не использован в коде!
+        Проверяет, является ли токен ограниченным.
+
+        Args:
+            payload: Декодированные данные токена
+
+        Returns:
+            bool: True если токен ограниченный, False если полный
+
+        Example:
+            ```python
+            payload = TokenManager.decode_token(token)
+            if TokenManager.is_token_limited(payload):
+                raise ForbiddenError("Требуется верификация email")
+            ```
+        """
+        return payload.get("limited", False)
+
+    @staticmethod
+    def get_user_id_from_payload(payload: dict) -> int:
+        """
+        !Не использован в коде!
+        Извлекает ID пользователя из payload токена.
+
+        Args:
+            payload: Декодированные данные токена
+
+        Returns:
+            int: ID пользователя
+
+        Raises:
+            TokenInvalidError: Если user_id отсутствует в токене
+        """
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise TokenInvalidError("Отсутствует user_id в токене")
+        return int(user_id)
+
+    @staticmethod
+    def upgrade_token_to_full(user_schema: Any) -> str:
+        """
+        !Не использован в коде!
+        Обновляет ограниченный токен до полного после верификации.
+
+        Args:
+            limited_token: Ограниченный токен пользователя
+            user_schema: Обновленная схема пользователя (is_verified=True)
+
+        Returns:
+            str: Новый полный токен
+
+        Raises:
+            TokenInvalidError: Если токен невалиден
+
+        Example:
+            ```python
+            # После верификации email
+            new_token = TokenManager.upgrade_token_to_full(verified_user)
+            ```
+        """
+        new_token = TokenManager.create_full_token(user_schema)
+
+        logger.info(
+            "Токен обновлен с ограниченного на полный",
+            extra={"user_id": user_schema.id},
+        )
+
+        return new_token

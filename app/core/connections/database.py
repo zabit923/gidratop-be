@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.core.connections.base import BaseClient
+from app.core.connections import BaseClient
 from app.core.settings import Config, settings
 
 

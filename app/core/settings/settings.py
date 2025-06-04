@@ -68,12 +68,18 @@ class Settings(BaseSettings):
     # Настройки аутентификации
     AUTH_URL: str = "api/v1/auth"
     TOKEN_TYPE: str = "Bearer"
-    TOKEN_EXPIRE_MINUTES: int = 30  # 30 минут
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 минут
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30 дней
     VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 часа
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30  # 30 минут
     TOKEN_ALGORITHM: str = "HS256"
     TOKEN_SECRET_KEY: SecretStr
     USER_INACTIVE_TIMEOUT: int = 900  # 15 минут
+
+    # Настройки cookies
+    COOKIE_DOMAIN: str = None  # Домен для cookies
+    COOKIE_SECURE: bool = True  # Использовать secure cookie в production
+    COOKIE_SAMESITE: str = "Lax"  # Политика SameSite для cookies
 
     # Настройки Redis
     REDIS_USER: str = "default"
@@ -186,6 +192,28 @@ class Settings(BaseSettings):
             "url": self.rabbitmq_url,
             "connection_timeout": self.RABBITMQ_CONNECTION_TIMEOUT,
             "exchange": self.RABBITMQ_EXCHANGE,
+        }
+
+    # Настройки AWS
+    AWS_SERVICE_NAME: str = "s3"
+    AWS_REGION: str = "ru-central1"
+    AWS_ENDPOINT: str = "https://storage.yandexcloud.net"
+    AWS_BUCKET_NAME: str = "store.data"
+    AWS_ACCESS_KEY_ID: SecretStr
+    AWS_SECRET_ACCESS_KEY: SecretStr
+
+    @property
+    def s3_params(self) -> Dict[str, Any]:
+        """
+        Формирует информацию о конфигурации S3.
+        """
+        return {
+            "service_name": self.AWS_SERVICE_NAME,
+            "aws_region": self.AWS_REGION,
+            "aws_endpoint": self.AWS_ENDPOINT,
+            "aws_bucket_name": self.AWS_BUCKET_NAME,
+            "aws_access_key_id": self.AWS_ACCESS_KEY_ID,
+            "aws_secret_access_key": self.AWS_SECRET_ACCESS_KEY,
         }
 
     # Настройки почты

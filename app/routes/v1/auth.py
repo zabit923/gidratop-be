@@ -16,13 +16,14 @@ Classes:
     AuthRouter: Класс для настройки маршрутов аутентификации
 """
 
-from fastapi import Depends, Header
+from typing import Optional
+
+from fastapi import Depends, Header, Response, Cookie, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.connections.cache import get_redis_client
-from app.core.connections.database import get_db_session
+from app.core.exceptions import TokenMissingError
+from app.core.dependencies import get_db_session, get_redis_client
 from app.routes.base import BaseRouter
 from app.schemas import (ForgotPasswordSchema,
                          InvalidCredentialsResponseSchema,
@@ -59,7 +60,7 @@ class AuthRouter(BaseRouter):
         """
         Инициализирует роутер аутентификации.
         """
-        super().__init__(prefix="auth", tags=["Аутентификация"])
+        super().__init__(prefix="auth", tags=["Authentication"])
 
     def configure(self):
         """
@@ -73,7 +74,7 @@ class AuthRouter(BaseRouter):
             path="",
             response_model=TokenResponseSchema,
             summary="Аутентификация пользователя",
-            description="Аутентифицирует пользователя и возвращает JWT токены",
+            # description="Аутентифицирует пользователя и возвращает JWT токены",
             responses={
                 200: {
                     "model": TokenResponseSchema,
@@ -94,12 +95,14 @@ class AuthRouter(BaseRouter):
             },
         )
         async def authenticate(
+            response: Response,
             form_data: OAuth2PasswordRequestForm = Depends(),
+            use_cookies: bool = Query(False, description="Использовать куки для хранения токенов"),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> TokenResponseSchema:
             """
-            ## 🔐 Аутентификация пользователя
+            ## 🔐 Аутентификация пользователя с опциональным использованием куков
 
             Аутентифицирует пользователя по имени, email или телефону и возвращает JWT токены.
 
@@ -111,20 +114,23 @@ class AuthRouter(BaseRouter):
             ### Параметры:
             * **username**: Email, имя пользователя или телефон
             * **password**: Пароль пользователя
+            * **use_cookies**: Булево значение, указывающее, использовать ли куки для хранения токенов (по умолчанию False)
 
             ### Returns:
+            * **success**: Булево значение успешности аутентификации
+            * **message**: Сообщение об успешной аутентификации
             * **access_token**: JWT токен доступа (срок действия: 15 минут)
             * **refresh_token**: Refresh токен для обновления (срок действия: 7 дней)
             * **token_type**: Тип токена (Bearer)
             * **expires_in**: Время жизни access токена в секундах
             """
-            return await AuthService(session, redis).authenticate(form_data)
+            return await AuthService(session, redis).authenticate(form_data, response, use_cookies)
 
         @self.router.post(
             path="/refresh",
             response_model=TokenResponseSchema,
             summary="Обновление токена доступа",
-            description="Получение нового access токена с помощью refresh токена",
+            # description="Получение нового access токена с помощью refresh токена",
             responses={
                 200: {
                     "model": TokenResponseSchema,
@@ -149,13 +155,12 @@ class AuthRouter(BaseRouter):
             },
         )
         async def refresh_token(
-            refresh_token: str = Header(
-                ...,
-                description="Refresh токен для получения нового access токена",
-                example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-            ),
+            response: Response,
+            use_cookies: bool = Query(False, description="Использовать куки для токенов"),
+            refresh_token_header: str = Header(None, alias="refresh-token"),
+            refresh_token_cookie: str = Cookie(None, alias="refresh_token"),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> TokenResponseSchema:
             """
             ## 🔄 Обновление токена доступа
@@ -164,26 +169,39 @@ class AuthRouter(BaseRouter):
             Используется когда access токен истек, но refresh токен еще действителен.
 
             ### Заголовки:
-            * **refresh_token**: Refresh токен, полученный при аутентификации
+            * **refresh_token_header**: Refresh токен, полученный при аутентификации
+            * **refresh_token_cookie**: Refresh токен из куки (если используется куки)
+            * **use_cookies**: Булево значение, указывающее, использовать ли куки для хранения токенов (по умолчанию False)
 
             ### Returns:
-            * **access_token**: Новый JWT токен доступа
-            * **refresh_token**: Новый refresh токен (ротация токенов)
-            * **token_type**: Тип токена (Bearer)
-            * **expires_in**: Время жизни нового access токена в секундах
+            * **success**: Булево значение успешности обновления токена
+            * **message**: Сообщение об успешном обновлении токена
+            * **data**: Данные обновленного токена
+                * **access_token**: Новый JWT токен доступа
+                * **refresh_token**: Новый refresh токен (ротация токенов)
+                * **token_type**: Тип токена (Bearer)
+                * **expires_in**: Время жизни нового access токена в секундах
 
             ### Безопасность:
             * Refresh токены имеют ограниченный срок действия
             * При каждом обновлении выдается новый refresh токен
             * Старый refresh токен становится недействительным
             """
-            return await AuthService(session, redis).refresh_token(refresh_token)
+            # Приоритет: заголовок -> кука
+            refresh_token = refresh_token_header or refresh_token_cookie
+
+            if not refresh_token:
+                raise TokenMissingError()
+
+            return await AuthService(session, redis).refresh_token(
+                refresh_token, response, use_cookies
+            )
 
         @self.router.post(
             path="/logout",
             response_model=LogoutResponseSchema,
             summary="Выход из системы",
-            description="Завершение сессии пользователя и аннулирование токенов",
+            # description="Завершение сессии пользователя и аннулирование токенов",
             responses={
                 200: {
                     "model": LogoutResponseSchema,
@@ -200,13 +218,12 @@ class AuthRouter(BaseRouter):
             },
         )
         async def logout(
-            authorization: str = Header(
-                None,
-                description="Заголовок Authorization с токеном Bearer",
-                example="Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-            ),
+            response: Response,
+            clear_cookies: bool = Query(False, description="Очистить куки при выходе"),
+            authorization: str = Header(None, description="Токен доступа"),
+            access_token_cookie: str = Cookie(None, alias="access_token"),
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> LogoutResponseSchema:
             """
             ## 🚪 Выход из системы
@@ -218,6 +235,7 @@ class AuthRouter(BaseRouter):
             * **authorization**: Bearer токен для идентификации сессии
 
             ### Returns:
+            * **success**: Булево значение успешности выхода
             * **message**: Сообщение о успешном выходе
             * **logged_out_at**: Время выхода из системы
 
@@ -226,13 +244,18 @@ class AuthRouter(BaseRouter):
             * Все активные сессии пользователя завершаются
             * Требуется повторная аутентификация для доступа
             """
-            return await AuthService(session, redis).logout(authorization)
+            if not authorization and access_token_cookie:
+                authorization = f"Bearer {access_token_cookie}"
+
+            return await AuthService(session, redis).logout(
+                authorization, response, clear_cookies
+            )
 
         @self.router.post(
             path="/forgot-password",
             response_model=PasswordResetResponseSchema,
             summary="Запрос восстановления пароля",
-            description="Отправка ссылки для сброса пароля на email",
+            # description="Отправка ссылки для сброса пароля на email",
             responses={
                 200: {
                     "model": PasswordResetResponseSchema,
@@ -246,9 +269,9 @@ class AuthRouter(BaseRouter):
             },
         )
         async def forgot_password(
-            forgot_data: ForgotPasswordSchema,
+            request: ForgotPasswordSchema,
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> PasswordResetResponseSchema:
             """
             ## 📧 Запрос восстановления пароля
@@ -260,6 +283,7 @@ class AuthRouter(BaseRouter):
             * **email**: Email адрес для отправки ссылки восстановления
 
             ### Returns:
+            * **success**: Булево значение успешности отправки ссылки
             * **message**: Сообщение о отправке ссылки
             * **email**: Email, на который отправлена ссылка
             * **expires_in**: Время действия ссылки в секундах
@@ -270,14 +294,14 @@ class AuthRouter(BaseRouter):
             * Одноразовые токены для сброса пароля
             """
             return await AuthService(session, redis).send_password_reset_email(
-                forgot_data
+                request.email
             )
 
         @self.router.post(
             path="/reset-password",
             response_model=PasswordResetConfirmResponseSchema,
             summary="Подтверждение сброса пароля",
-            description="Установка нового пароля по токену восстановления",
+            # description="Установка нового пароля по токену восстановления",
             responses={
                 200: {
                     "model": PasswordResetConfirmResponseSchema,
@@ -300,7 +324,7 @@ class AuthRouter(BaseRouter):
         async def reset_password(
             reset_data: PasswordResetConfirmSchema,
             session: AsyncSession = Depends(get_db_session),
-            redis: Redis = Depends(get_redis_client),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> PasswordResetConfirmResponseSchema:
             """
             ## 🔑 Подтверждение сброса пароля
@@ -314,6 +338,7 @@ class AuthRouter(BaseRouter):
             * **confirm_password**: Подтверждение нового пароля
 
             ### Returns:
+            * **success**: Булево значение успешности изменения пароля
             * **message**: Сообщение о успешном изменении пароля
             * **password_changed_at**: Время изменения пароля
 

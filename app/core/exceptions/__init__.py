@@ -12,6 +12,7 @@ from .auth import (
 )
 from .base import BaseAPIException
 from .categories import CategoryAlreadyExistsError, CategoryNotFoundError
+from .profile import ProfileNotFoundError
 from .users import ForbiddenError, UserCreationError, UserExistsError, UserNotFoundError
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "UserExistsError",
     "CategoryNotFoundError",
     "CategoryAlreadyExistsError",
+    "ProfileNotFoundError",
 ]

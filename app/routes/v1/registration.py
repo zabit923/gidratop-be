@@ -2,29 +2,27 @@
 Роутер для регистрации пользователей.
 
 Модуль содержит маршруты для регистрации новых пользователей
-и подтверждения их email адресов.
 
 Routes:
     POST /register - Регистрация нового пользователя
-    GET /register/verify-email/{token} - Подтверждение email по токену
 
 Classes:
     RegisterRouter: Класс для настройки маршрутов регистрации
 """
-from fastapi import Depends
+
+from typing import Optional
+
+from fastapi import Depends, Query, Response
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.connections.database import get_db_session
+from app.core.dependencies import get_db_session, get_redis_client
 from app.routes.base import BaseRouter
 from app.schemas import (
     RegistrationRequestSchema,
     RegistrationResponseSchema,
-    TokenExpiredResponseSchema,
-    TokenInvalidResponseSchema,
     UserCreationResponseSchema,
     UserExistsResponseSchema,
-    UserNotFoundResponseSchema,
-    VerificationResponseSchema,
 )
 from app.services.v1.registration.service import RegisterService
 
@@ -35,7 +33,6 @@ class RegisterRouter(BaseRouter):
 
     Предоставляет маршруты для:
     - Регистрации новых пользователей
-    - Подтверждения email адресов по токену
 
     Attributes:
         router (APIRouter): FastAPI роутер с настроенными маршрутами
@@ -45,7 +42,7 @@ class RegisterRouter(BaseRouter):
         """
         Инициализирует роутер регистрации.
         """
-        super().__init__(prefix="register", tags=["Регистрация"])
+        super().__init__(prefix="register", tags=["Registration"])
 
     def configure(self):
         """
@@ -59,7 +56,7 @@ class RegisterRouter(BaseRouter):
             path="",
             response_model=RegistrationResponseSchema,
             summary="Регистрация нового пользователя",
-            description="Регистрирует нового пользователя и отправляет письмо верификации",
+            # description="Регистрирует нового пользователя и отправляет письмо верификации",
             responses={
                 201: {
                     "model": RegistrationResponseSchema,
@@ -77,7 +74,12 @@ class RegisterRouter(BaseRouter):
         )
         async def registration_user(
             new_user: RegistrationRequestSchema,
+            response: Response,
+            use_cookies: bool = Query(
+                False, description="Использовать куки для хранения токенов"
+            ),
             session: AsyncSession = Depends(get_db_session),
+            redis: Optional[Redis] = Depends(get_redis_client),
         ) -> RegistrationResponseSchema:
             """
             ## 📝 Регистрация нового пользователя
@@ -90,82 +92,27 @@ class RegisterRouter(BaseRouter):
             * **email**: Email адрес пользователя (должен быть уникальным)
             * **password**: Пароль (минимум 8 символов, должен содержать буквы и цифры)
             * **phone**: Номер телефона в формате +7 (XXX) XXX-XX-XX (опционально)
+            * **use_cookies**: Использовать куки для хранения токенов (по умолчанию false)
 
             ### Returns:
-            * **user_id**: Уникальный идентификатор созданного пользователя
-            * **username**: Имя пользователя
-            * **email**: Email адрес
-            * **is_verified**: Статус подтверждения email (false для новых пользователей)
-            * **referral_code**: Реферальный код пользователя
+            * **success**: Статус успешной регистрации (true)
+            * **message**: Сообщение о результате регистрации
+            * **data**: Информация о созданном пользователе и токены доступа
 
             ### Процесс регистрации:
             1. Валидация входных данных
             2. Проверка уникальности email, username и телефона
             3. Создание пользователя в базе данных
-            4. Генерация токена верификации
+            4. Генерация ограниченных токенов доступа
             5. Отправка письма с ссылкой подтверждения
+            6. Опциональная установка куков с токенами
 
             ### Примечания:
             * Пользователь создается с is_verified=false
-            * Для полного доступа необходимо подтвердить email
+            * Выдаются ограниченные токены до подтверждения email
             * Письмо верификации действительно 24 часа
+            * При use_cookies=true токены сохраняются в HttpOnly куки
             """
-            return await RegisterService(session).create_user(new_user)
-
-        @self.router.get(
-            path="/verify-email/{token}",
-            response_model=VerificationResponseSchema,
-            summary="Подтверждение email адреса",
-            description="Подтверждает email адрес пользователя по токену из письма",
-            responses={
-                200: {
-                    "model": VerificationResponseSchema,
-                    "description": "Email успешно подтвержден",
-                },
-                400: {
-                    "model": TokenInvalidResponseSchema,
-                    "description": "Недействительный токен верификации",
-                },
-                419: {
-                    "model": TokenExpiredResponseSchema,
-                    "description": "Срок действия токена истек",
-                },
-                404: {
-                    "model": UserNotFoundResponseSchema,
-                    "description": "Пользователь не найден",
-                },
-            },
-        )
-        async def verify_email(
-            token: str,
-            session: AsyncSession = Depends(get_db_session),
-        ) -> VerificationResponseSchema:
-            """
-            ## ✉️ Подтверждение email адреса
-
-            Подтверждает email адрес пользователя по токену из письма верификации.
-            После подтверждения пользователь получает полный доступ к системе.
-
-            ### Параметры:
-            * **token**: Токен верификации из письма
-
-            ### Returns:
-            * **user_id**: ID пользователя
-            * **success**: Статус операции
-            * **message**: Сообщение о результате
-            * **verified_at**: Время подтверждения email
-
-            ### Процесс верификации:
-            1. Декодирование и валидация токена
-            2. Проверка срока действия токена
-            3. Поиск пользователя в базе данных
-            4. Обновление статуса is_verified=true
-            5. Отправка письма об успешной регистрации
-
-            ### Примечания:
-            * Токен одноразовый и имеет ограниченный срок действия
-            * После подтверждения пользователь может войти в систему
-            * Если email уже подтвержден, возвращается соответствующее сообщение
-            * При истечении токена необходимо запросить повторную отправку
-            """
-            return await RegisterService(session).verify_email(token)
+            return await RegisterService(session, redis).create_user(
+                new_user, response, use_cookies
+            )

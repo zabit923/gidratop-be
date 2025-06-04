@@ -5,14 +5,12 @@
 Включает схемы для различных представлений пользователя:
 от базовой информации до детальных данных профиля.
 
-Схемы:
-    - UserSchema: Полная схема пользователя с основными полями
-    - UserPublicSchema: Публичная схема пользователя (безопасная для показа)
-    - UserPrivateSchema: Приватная схема с конфиденциальными данными
-    - UserProfileSchema: Схема профиля с персональной информацией
-    - CurrentUserSchema: Схема текущего аутентифицированного пользователя
-    - UserDetailDataSchema: Детальная информация о пользователе
-    - UserStatusDataSchema: Схема статуса пользователя (онлайн/оффлайн)
+Схемы организованы по принципу наследования и назначения:
+- UserSchema: Полная схема со всеми полями модели
+- UserPrivateSchema: Для владельца аккаунта (наследует UserSchema)
+- UserPublicSchema: Публичная информация для других пользователей
+- CurrentUserSchema: Минимальная схема для JWT токенов
+- UserCredentialsSchema: Для внутренней аутентификации
 """
 
 from datetime import date, datetime
@@ -27,295 +25,286 @@ from app.schemas.v1.base import BaseSchema, CommonBaseSchema
 
 class UserSchema(BaseSchema):
     """
-    Основная схема пользователя с базовыми полями.
+    Полная схема пользователя для внутренних API операций.
 
-    Содержит основную информацию о пользователе, включая аутентификационные
-    данные, контактную информацию и статусы. Используется для большинства
-    операций с пользователями в API.
+    Содержит все поля модели UserModel для полного представления
+    пользователя в системе. Используется в сервисах и менеджерах данных.
 
     Attributes:
-        id (int): Уникальный идентификатор пользователя
-        username (str): Имя пользователя для входа в систему
-        email (EmailStr): Email адрес пользователя
-        phone (str | None): Номер телефона пользователя
-        role (UserRole): Роль пользователя в системе
-        avatar (str | None): URL аватара пользователя
-        is_active (bool): Статус активности аккаунта
-        is_verified (bool): Статус верификации email/телефона
-        created_at (datetime): Дата создания аккаунта
-        updated_at (datetime): Дата последнего обновления
+        # Основная информация
+        username: Уникальное имя пользователя для входа
+        email: Email адрес (валидируется)
+        phone: Номер телефона (опционально)
+        role: Роль в системе (по умолчанию USER)
+
+        # Персональные данные
+        first_name: Имя
+        last_name: Фамилия
+        middle_name: Отчество
+        birth_date: Дата рождения
+        gender: Пол
+        avatar: URL изображения профиля
+
+        # Статусы аккаунта
+        is_active: Активен ли аккаунт (по умолчанию True)
+        is_verified: Подтвержден ли email/телефон (по умолчанию False)
+        is_online: Онлайн статус (опционально, для реального времени)
+
+        # Финансы
+        balance: Основной баланс счета
+        bonus_points: Накопленные бонусные баллы
+        cashback_balance: Баланс кешбэка
+
+        # Настройки уведомлений
+        email_notifications: Разрешены ли email уведомления
+        sms_notifications: Разрешены ли SMS уведомления
+        push_notifications: Разрешены ли push уведомления
+        marketing_consent: Согласие на маркетинговые рассылки
+
+        # Реферальная система
+        referral_code: Персональный реферальный код
+        referred_by_id: ID пользователя, который пригласил
+
+        # Статистика активности
+        total_orders: Общее количество заказов
+        total_spent: Общая потраченная сумма
+        last_order_date: Дата последнего заказа
+        last_login: Время последнего входа в систему
+        registration_source: Источник регистрации (web, mobile, etc.)
+
+    Usage:
+        ```python
+        # В BaseEntityManager для валидации моделей
+        user_schema = UserSchema.model_validate(user_model)
+
+        # В сервисах для внутренних операций
+        users = await user_manager.get_items()  # List[UserSchema]
+        ```
 
     Example:
         ```python
         user = UserSchema(
-            id=123,
             username="john_doe",
             email="john@example.com",
+            first_name="John",
             role=UserRole.USER,
-            is_active=True,
-            is_verified=False
+            balance=Decimal("100.50")
         )
         ```
     """
 
-    username: str = Field(
-        description="Имя пользователя для входа в систему",
-        examples=["john_doe", "user123"],
+    # Основные поля
+    username: str = Field(description="Имя пользователя")
+    email: EmailStr = Field(description="Email адрес")
+    phone: Optional[str] = Field(default=None, description="Номер телефона")
+    role: UserRole = Field(default=UserRole.USER, description="Роль пользователя")
+
+    # Персональная информация
+    first_name: Optional[str] = Field(default=None, description="Имя")
+    last_name: Optional[str] = Field(default=None, description="Фамилия")
+    middle_name: Optional[str] = Field(default=None, description="Отчество")
+    birth_date: Optional[date] = Field(default=None, description="Дата рождения")
+    gender: Optional[str] = Field(default=None, description="Пол")
+    avatar: Optional[str] = Field(default=None, description="URL аватара")
+
+    # Статусы
+    is_active: bool = Field(default=True, description="Статус активности")
+    is_verified: bool = Field(default=False, description="Статус верификации")
+    is_online: bool = Field(default=False, description="Статус онлайн")
+
+    # Финансы
+    balance: Decimal = Field(default=Decimal("0.00"), description="Основной баланс")
+    bonus_points: int = Field(default=0, description="Бонусные баллы")
+    cashback_balance: Decimal = Field(
+        default=Decimal("0.00"), description="Баланс кешбэка"
     )
 
-    email: EmailStr = Field(
-        description="Email адрес пользователя", examples=["user@example.com"]
+    # Настройки уведомлений
+    email_notifications: bool = Field(default=True, description="Email уведомления")
+    sms_notifications: bool = Field(default=False, description="SMS уведомления")
+    push_notifications: bool = Field(default=True, description="Push уведомления")
+    marketing_consent: bool = Field(default=False, description="Согласие на маркетинг")
+
+    # Реферальная система
+    referral_code: Optional[str] = Field(default=None, description="Реферальный код")
+    referred_by_id: Optional[int] = Field(default=None, description="ID пригласившего")
+
+    # Статистика
+    total_orders: int = Field(default=0, description="Общее количество заказов")
+    total_spent: Decimal = Field(
+        default=Decimal("0.00"), description="Общая потраченная сумма"
+    )
+    last_order_date: Optional[datetime] = Field(
+        default=None, description="Дата последнего заказа"
+    )
+    last_login: Optional[datetime] = Field(
+        default=None, description="Время последнего входа"
+    )
+    registration_source: Optional[str] = Field(
+        default=None, description="Источник регистрации"
     )
 
-    phone: Optional[str] = Field(
-        default=None,
-        description="Номер телефона пользователя",
-        examples=["+7 (999) 123-45-67", None],
-    )
 
-    role: UserRole = Field(
-        default=UserRole.USER, description="Роль пользователя в системе"
-    )
-
-    avatar: Optional[str] = Field(
-        default=None,
-        description="URL аватара пользователя",
-        examples=["https://example.com/avatar.jpg", None],
-    )
-
-    is_active: bool = Field(default=True, description="Статус активности аккаунта")
-
-    is_verified: bool = Field(
-        default=False, description="Статус верификации email/телефона"
-    )
-
-
-class UserPublicSchema(CommonBaseSchema):
+class UserPublicSchema(BaseSchema):
     """
-    Публичная схема пользователя для безопасного отображения.
+    Публичная схема пользователя для других пользователей.
 
-    Содержит только те данные пользователя, которые безопасно показывать
-    другим пользователям или в публичных API. Исключает конфиденциальную
-    информацию такую как email, телефон и финансовые данные.
+    Содержит только безопасные для публичного просмотра поля.
+    Исключает персональную, финансовую и приватную информацию.
 
     Attributes:
-        id (int): Уникальный идентификатор пользователя
-        username (str): Имя пользователя
-        avatar (str | None): URL аватара пользователя
-        role (UserRole): Роль пользователя (если не скрыта)
-        is_active (bool): Статус активности (для модерации)
+        username: Имя пользователя
+        avatar: URL аватара
+        role: Роль пользователя
+        is_active: Статус активности
+        total_orders: Количество заказов (для репутации)
+        created_at: Дата регистрации (наследуется от BaseSchema)
 
     Usage:
-        Используется в списках пользователей, комментариях, отзывах
-        и других местах где нужно показать базовую информацию о пользователе.
+        ```python
+        # GET /api/v1/users/{user_id} - публичный профиль
+        @router.get("/users/{user_id}", response_model=UserPublicSchema)
+        async def get_user_public_profile(user_id: int):
+            return await user_service.get_public_profile(user_id)
+
+        # GET /api/v1/users - список пользователей
+        @router.get("/users", response_model=List[UserPublicSchema])
+        async def get_users_list():
+            return await user_service.get_public_users_list()
+        ```
     """
 
-    id: int = Field(description="Уникальный идентификатор пользователя")
     username: str = Field(description="Имя пользователя")
     avatar: Optional[str] = Field(default=None, description="URL аватара")
     role: UserRole = Field(description="Роль пользователя")
     is_active: bool = Field(description="Статус активности")
+    total_orders: int = Field(default=0, description="Количество заказов")
 
 
-class UserPrivateSchema(BaseSchema):
+class UserPrivateSchema(UserSchema):
     """
-    Приватная схема пользователя с конфиденциальными данными.
+    Приватная схема пользователя для владельца аккаунта.
 
-    Содержит полную информацию о пользователе, включая финансовые данные,
-    настройки уведомлений и статистику. Используется только для владельца
-    аккаунта или администраторов.
+    Наследует ВСЕ поля от UserSchema без изменений.
+    Используется для возврата полной информации владельцу аккаунта.
+
+    Usage:
+        ```python
+        # GET /api/v1/profile - получение собственного профиля
+        @router.get("/profile", response_model=UserPrivateSchema)
+        async def get_my_profile(current_user: CurrentUserSchema = Depends(get_current_user)):
+            return await user_service.get_private_profile(current_user.id)
+
+        # GET /api/v1/users/me - альтернативный endpoint
+        @router.get("/users/me", response_model=UserPrivateSchema)
+        async def get_current_user_details(current_user: CurrentUserSchema = Depends(get_current_user)):
+            return await user_service.get_user_details(current_user.id)
+        ```
+    """
+
+    pass  # Наследует все поля от UserSchema
+
+
+class UserProfileSchema(BaseSchema):
+    """
+    Схема для редактирования профиля пользователя.
+
+    Содержит только поля, которые пользователь может изменять самостоятельно.
+    Исключает системные поля (id, role, балансы, статистику).
 
     Attributes:
-        Все поля из UserSchema плюс:
-        first_name (str | None): Имя пользователя
-        last_name (str | None): Фамилия пользователя
-        middle_name (str | None): Отчество пользователя
-        birth_date (date | None): Дата рождения
-        gender (str | None): Пол пользователя
-        balance (Decimal): Основной баланс
-        bonus_points (int): Бонусные баллы
-        cashback_balance (Decimal): Баланс кешбэка
-        email_notifications (bool): Настройка email уведомлений
-        sms_notifications (bool): Настройка SMS уведомлений
-        push_notifications (bool): Настройка push уведомлений
-        marketing_consent (bool): Согласие на маркетинг
-        referral_code (str | None): Реферальный код
-        total_orders (int): Общее количество заказов
-        total_spent (Decimal): Общая потраченная сумма
-        last_order_date (datetime | None): Дата последнего заказа
-        last_login (datetime | None): Время последнего входа
-        registration_source (str | None): Источник регистрации
+        # Персональная информация
+        first_name: Имя
+        last_name: Фамилия
+        middle_name: Отчество
+        birth_date: Дата рождения
+        gender: Пол
+        avatar: URL аватара
+        phone: Номер телефона
+
+        # Настройки уведомлений
+        email_notifications: Email уведомления
+        sms_notifications: SMS уведомления
+        push_notifications: Push уведомления
+        marketing_consent: Согласие на маркетинг
+
+    Usage:
+        ```python
+        # PUT /api/v1/profile - полное обновление профиля
+        @router.put("/profile", response_model=UserPrivateSchema)
+        async def update_profile(
+            profile_data: UserProfileSchema,
+            current_user: CurrentUserSchema = Depends(get_current_user)
+        ):
+            return await user_service.update_profile(current_user.id, profile_data)
+
+        # PATCH /api/v1/profile - частичное обновление
+        @router.patch("/profile", response_model=UserPrivateSchema)
+        async def patch_profile(
+            profile_data: UserProfileSchema,
+            current_user: CurrentUserSchema = Depends(get_current_user)
+        ):
+            return await user_service.patch_profile(current_user.id, profile_data)
+        ```
     """
 
-    # Наследуем все поля из UserSchema
-    username: str
-    email: EmailStr
-    phone: Optional[str] = None
-    role: UserRole = UserRole.USER
-    avatar: Optional[str] = None
-    is_active: bool = True
-    is_verified: bool = False
-
-    # Персональная информация
-    first_name: Optional[str] = Field(
-        default=None, description="Имя пользователя", examples=["Иван", "John"]
-    )
-
-    last_name: Optional[str] = Field(
-        default=None, description="Фамилия пользователя", examples=["Иванов", "Doe"]
-    )
-
-    middle_name: Optional[str] = Field(
-        default=None, description="Отчество пользователя", examples=["Иванович", None]
-    )
-
-    birth_date: Optional[date] = Field(
-        default=None, description="Дата рождения пользователя", examples=["1990-01-15"]
-    )
-
-    gender: Optional[str] = Field(
-        default=None,
-        description="Пол пользователя",
-        examples=["male", "female", "other"],
-    )
-
-    # Финансовые данные
-    balance: Decimal = Field(
-        default=Decimal("0.00"),
-        description="Основной баланс пользователя в рублях",
-        examples=[1500.50, 0.00],
-    )
-
-    bonus_points: int = Field(
-        default=0, description="Количество бонусных баллов", examples=[250, 0]
-    )
-
-    cashback_balance: Decimal = Field(
-        default=Decimal("0.00"),
-        description="Баланс кешбэка в рублях",
-        examples=[75.25, 0.00],
-    )
+    first_name: Optional[str] = Field(default=None, description="Имя")
+    last_name: Optional[str] = Field(default=None, description="Фамилия")
+    middle_name: Optional[str] = Field(default=None, description="Отчество")
+    birth_date: Optional[date] = Field(default=None, description="Дата рождения")
+    gender: Optional[str] = Field(default=None, description="Пол")
+    avatar: Optional[str] = Field(default=None, description="URL аватара")
+    phone: Optional[str] = Field(default=None, description="Номер телефона")
 
     # Настройки уведомлений
-    email_notifications: bool = Field(
-        default=True, description="Получать уведомления на email"
-    )
-
-    sms_notifications: bool = Field(
-        default=False, description="Получать SMS уведомления"
-    )
-
-    push_notifications: bool = Field(
-        default=True, description="Получать push уведомления"
-    )
-
-    marketing_consent: bool = Field(
-        default=False, description="Согласие на получение маркетинговых материалов"
-    )
-
-    # Реферальная система
-    referral_code: Optional[str] = Field(
-        default=None,
-        description="Реферальный код пользователя",
-        examples=["REF123ABC", None],
-    )
-
-    # Статистика
-    total_orders: int = Field(
-        default=0, description="Общее количество заказов пользователя", examples=[15, 0]
-    )
-
-    total_spent: Decimal = Field(
-        default=Decimal("0.00"),
-        description="Общая потраченная сумма в рублях",
-        examples=[25000.00, 0.00],
-    )
-
-    last_order_date: Optional[datetime] = Field(
-        default=None,
-        description="Дата последнего заказа",
-        examples=["2024-01-15T14:30:00Z"],
-    )
-
-    last_login: Optional[datetime] = Field(
-        default=None,
-        description="Время последнего входа в систему",
-        examples=["2024-01-20T09:15:00Z"],
-    )
-
-    registration_source: Optional[str] = Field(
-        default=None,
-        description="Источник регистрации пользователя",
-        examples=["web", "mobile", "api"],
-    )
-
-
-class UserProfileSchema(CommonBaseSchema):
-    """
-    Схема профиля пользователя для редактирования.
-
-    Содержит поля профиля, которые пользователь может редактировать.
-    Исключает системные поля и финансовые данные.
-
-    Attributes:
-        first_name (str | None): Имя
-        last_name (str | None): Фамилия
-        middle_name (str | None): Отчество
-        birth_date (date | None): Дата рождения
-        gender (str | None): Пол
-        avatar (str | None): URL аватара
-        phone (str | None): Номер телефона
-        email_notifications (bool): Настройка email уведомлений
-        sms_notifications (bool): Настройка SMS уведомлений
-        push_notifications (bool): Настройка push уведомлений
-        marketing_consent (bool): Согласие на маркетинг
-    """
-
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    middle_name: Optional[str] = None
-    birth_date: Optional[date] = None
-    gender: Optional[str] = None
-    avatar: Optional[str] = None
-    phone: Optional[str] = None
-    email_notifications: bool = True
-    sms_notifications: bool = False
-    push_notifications: bool = True
-    marketing_consent: bool = False
+    email_notifications: bool = Field(default=True, description="Email уведомления")
+    sms_notifications: bool = Field(default=False, description="SMS уведомления")
+    push_notifications: bool = Field(default=True, description="Push уведомления")
+    marketing_consent: bool = Field(default=False, description="Согласие на маркетинг")
 
 
 class CurrentUserSchema(CommonBaseSchema):
     """
     Схема текущего аутентифицированного пользователя.
 
-    Используется для передачи информации о текущем пользователе
-    в контексте аутентификации. Содержит минимальный набор данных
-    необходимых для авторизации и отображения в интерфейсе.
+    Минимальный набор полей для JWT токенов и зависимостей FastAPI.
+    Используется в Depends(get_current_user) для получения данных
+    текущего пользователя без лишней нагрузки.
 
     Attributes:
-        id (int): Уникальный идентификатор пользователя
-        username (str): Имя пользователя для входа
-        email (EmailStr): Email адрес пользователя
-        role (UserRole): Роль пользователя в системе
-        is_active (bool): Статус активности аккаунта
-        is_verified (bool): Статус верификации email/телефона
+        id: ID пользователя
+        username: Имя пользователя
+        email: Email адрес
+        role: Роль пользователя
+        is_active: Статус активности
+        is_verified: Статус верификации
 
     Usage:
         ```python
-        @router.get("/me", response_model=CurrentUserSchema)
-        async def get_current_user(
-            current_user: UserModel = Depends(get_current_user)
+        # В защищенных endpoints как зависимость
+        @router.get("/protected-endpoint")
+        async def protected_route(
+            current_user: CurrentUserSchema = Depends(get_current_user)
         ):
-            return CurrentUserSchema.model_validate(current_user)
+            return {"message": f"Hello, {current_user.username}!"}
+
+        # Проверка роли
+        @router.get("/admin-only")
+        async def admin_route(
+            current_user: CurrentUserSchema = Depends(get_current_user)
+        ):
+            if current_user.role != UserRole.ADMIN:
+                raise HTTPException(403, "Access denied")
+            return {"admin_data": "secret"}
         ```
     """
 
-    id: int = Field(description="Уникальный идентификатор пользователя")
+    id: int = Field(description="ID пользователя")
     username: str = Field(description="Имя пользователя")
-    email: EmailStr = Field(description="Email адрес пользователя")
+    email: EmailStr = Field(description="Email адрес")
     role: UserRole = Field(description="Роль пользователя")
-    is_active: bool = Field(default=True, description="Статус активности")
-    is_verified: bool = Field(default=False, description="Статус верификации")
+    is_active: bool = Field(description="Статус активности")
+    is_verified: bool = Field(description="Статус верификации")
 
 
 class UserDetailDataSchema(BaseSchema):
@@ -323,21 +312,38 @@ class UserDetailDataSchema(BaseSchema):
     Схема детальной информации о пользователе для административных целей.
 
     Используется администраторами для просмотра подробной информации
-    о пользователях. Содержит расширенный набор данных без финансовой
-    информации.
+    о пользователях в админ-панели. Содержит расширенный набор данных
+    без финансовой информации и паролей.
 
     Attributes:
-        username (str): Имя пользователя
-        email (str): Email адрес пользователя
-        role (UserRole): Роль пользователя в системе
-        is_active (bool): Статус активности аккаунта
-        is_verified (bool): Статус верификации
-        registration_source (str | None): Источник регистрации
-        last_login (datetime | None): Время последнего входа
-        total_orders (int): Общее количество заказов
+        username: Имя пользователя
+        email: Email адрес пользователя
+        role: Роль пользователя в системе
+        is_active: Статус активности аккаунта
+        is_verified: Статус верификации
+        registration_source: Источник регистрации
+        last_login: Время последнего входа
+        total_orders: Общее количество заказов
+        created_at: Дата регистрации (наследуется от BaseSchema)
+        updated_at: Дата последнего обновления (наследуется от BaseSchema)
 
     Usage:
-        Используется в административных панелях для управления пользователями.
+        ```python
+        # GET /api/v1/admin/users/{user_id} - детальная информация для админов
+        @router.get("/admin/users/{user_id}", response_model=UserDetailDataSchema)
+        async def get_user_details_admin(
+            user_id: int,
+            current_user: CurrentUserSchema = Depends(get_admin_user)
+        ):
+            return await admin_service.get_user_details(user_id)
+
+        # GET /api/v1/admin/users - список пользователей для админ-панели
+        @router.get("/admin/users", response_model=List[UserDetailDataSchema])
+        async def get_users_admin(
+            current_user: CurrentUserSchema = Depends(get_admin_user)
+        ):
+            return await admin_service.get_users_list()
+        ```
     """
 
     username: str = Field(description="Имя пользователя")
@@ -356,30 +362,50 @@ class UserDetailDataSchema(BaseSchema):
 
 class UserStatusDataSchema(CommonBaseSchema):
     """
-    Схема данных о статусе активности пользователя.
+    Схема данных о статусе активности пользователя в реальном времени.
 
     Используется для отображения онлайн статуса пользователей
-    в реальном времени. Может использоваться в чатах, списках
-    пользователей и других интерактивных элементах.
+    в чатах, списках пользователей и других интерактивных элементах.
+    Данные получаются из Redis кеша.
 
     Attributes:
-        is_online (bool): Находится ли пользователь онлайн
-        last_activity (int | None): Время последней активности в Unix timestamp
+        is_online: Находится ли пользователь онлайн в данный момент
+        last_activity: Время последней активности в Unix timestamp
+
+    Usage:
+        ```python
+        # GET /api/v1/users/{user_id}/status - статус конкретного пользователя
+        @router.get("/users/{user_id}/status", response_model=UserStatusDataSchema)
+        async def get_user_status(user_id: int):
+            return await status_service.get_user_status(user_id)
+
+        # WebSocket для реального времени
+        @router.websocket("/ws/user-status")
+        async def user_status_websocket(websocket: WebSocket):
+            await websocket.accept()
+            while True:
+                status = await status_service.get_current_user_status()
+                await websocket.send_json(status.model_dump())
+
+        # В чатах для показа онлайн статуса
+        @router.get("/chat/participants", response_model=List[UserStatusDataSchema])
+        async def get_chat_participants_status(chat_id: int):
+            return await chat_service.get_participants_status(chat_id)
+        ```
 
     Example:
         ```python
+        # Пользователь онлайн
         status = UserStatusDataSchema(
             is_online=True,
             last_activity=1642248600  # 2022-01-15 12:30:00 UTC
         )
-        ```
 
-    Usage:
-        ```python
-        @router.get("/users/{user_id}/status")
-        async def get_user_status(user_id: int) -> UserStatusDataSchema:
-            # Логика получения статуса
-            return status
+        # Пользователь оффлайн
+        status = UserStatusDataSchema(
+            is_online=False,
+            last_activity=1642245000  # час назад
+        )
         ```
     """
 
@@ -396,26 +422,43 @@ class UserStatusDataSchema(CommonBaseSchema):
 
 class UserCredentialsSchema(CommonBaseSchema):
     """
-    Схема данных пользователя для аутентификации.
+    Схема учетных данных пользователя для внутренней аутентификации.
 
-    Содержит основные поля пользователя, необходимые для проверки
-    учетных данных и создания токенов. Включает хешированный пароль
-    для внутренних операций аутентификации.
+    Содержит хешированный пароль и основные поля для проверки
+    учетных данных. ТОЛЬКО для внутреннего использования в сервисах
+    аутентификации. НЕ должна возвращаться в API ответах.
 
     Attributes:
-        id (int): Уникальный идентификатор пользователя
-        username (str): Имя пользователя для входа
-        email (EmailStr): Email адрес пользователя
-        role (UserRole): Роль пользователя в системе
-        hashed_password (str): Хешированный пароль пользователя
-        is_active (bool): Статус активности аккаунта
-        is_verified (bool): Статус верификации email/телефона
+        id: Уникальный идентификатор пользователя
+        username: Имя пользователя
+        email: Email адрес пользователя
+        role: Роль пользователя в системе
+        hashed_password: Хешированный пароль пользователя
+        is_active: Статус активности аккаунта
+        is_verified: Статус верификации email/телефона
 
     Usage:
-        Используется внутри системы аутентификации для проверки
-        учетных данных и создания JWT токенов. НЕ должна возвращаться
-        в API ответах из-за наличия хешированного пароля.
+        ```python
+        # В AuthService для проверки паролей
+        async def authenticate(self, credentials: AuthSchema):
+            user_model = await self.get_user_by_identifier(credentials.username)
+            user_creds = UserCredentialsSchema.model_validate(user_model)
 
+            if not PasswordHasher.verify(user_creds.hashed_password, credentials.password):
+                raise InvalidCredentialsError()
+
+        # В TokenManager для создания JWT
+        def create_payload(user_creds: UserCredentialsSchema) -> dict:
+            return {
+                "sub": user_creds.email,
+                "user_id": user_creds.id,
+                "role": user_creds.role.value
+             }
+        ```
+
+    Warning:
+        ⚠️ НИКОГДА не возвращайте эту схему в API ответах!
+        Содержит хешированный пароль - только для внутреннего использования.
     """
 
     id: int = Field(description="Уникальный идентификатор пользователя")
@@ -425,3 +468,140 @@ class UserCredentialsSchema(CommonBaseSchema):
     hashed_password: str = Field(description="Хешированный пароль")
     is_active: bool = Field(default=True, description="Статус активности")
     is_verified: bool = Field(default=False, description="Статус верификации")
+
+
+class UserFinancialDataSchema(BaseSchema):
+    """
+    Схема финансовых данных пользователя.
+
+    Содержит только финансовую информацию для специализированных
+    endpoints работы с балансами, бонусами и кешбэком.
+    Доступна только владельцу аккаунта и администраторам.
+
+    Attributes:
+        balance: Основной баланс счета
+        bonus_points: Накопленные бонусные баллы
+        cashback_balance: Баланс кешбэка
+        total_spent: Общая потраченная сумма
+
+    Usage:
+        ```python
+        # GET /api/v1/profile/finances - финансовая информация
+        @router.get("/profile/finances", response_model=UserFinancialDataSchema)
+        async def get_user_finances(
+            current_user: CurrentUserSchema = Depends(get_current_user)
+        ):
+            return await finance_service.get_user_finances(current_user.id)
+
+        # POST /api/v1/admin/users/{user_id}/balance - пополнение баланса админом
+        @router.post("/admin/users/{user_id}/balance")
+        async def add_balance(
+            user_id: int,
+            amount: Decimal,
+            current_user: CurrentUserSchema = Depends(get_admin_user)
+        ):
+            await finance_service.add_balance(user_id, amount)
+            return await finance_service.get_user_finances(user_id)
+        ```
+    """
+
+    balance: Decimal = Field(default=Decimal("0.00"), description="Основной баланс")
+    bonus_points: int = Field(default=0, description="Бонусные баллы")
+    cashback_balance: Decimal = Field(
+        default=Decimal("0.00"), description="Баланс кешбэка"
+    )
+    total_spent: Decimal = Field(
+        default=Decimal("0.00"), description="Общая потраченная сумма"
+    )
+
+
+class UserNotificationSettingsSchema(BaseSchema):
+    """
+    Схема настроек уведомлений пользователя.
+
+    Содержит только настройки уведомлений для специализированных
+    endpoints управления подписками и согласиями.
+
+    Attributes:
+        email_notifications: Разрешены ли email уведомления
+        sms_notifications: Разрешены ли SMS уведомления
+        push_notifications: Разрешены ли push уведомления
+        marketing_consent: Согласие на маркетинговые рассылки
+
+    Usage:
+        ```python
+        # GET /api/v1/profile/notifications - текущие настройки
+        @router.get("/profile/notifications", response_model=UserNotificationSettingsSchema)
+        async def get_notification_settings(
+            current_user: CurrentUserSchema = Depends(get_current_user)
+        ):
+            return await notification_service.get_user_settings(current_user.id)
+
+        # PUT /api/v1/profile/notifications - обновление настроек
+        @router.put("/profile/notifications", response_model=UserNotificationSettingsSchema)
+        async def update_notification_settings(
+            settings: UserNotificationSettingsSchema,
+            current_user: CurrentUserSchema = Depends(get_current_user)
+        ):
+            return await notification_service.update_settings(current_user.id, settings)
+        ```
+    """
+
+    email_notifications: bool = Field(default=True, description="Email уведомления")
+    sms_notifications: bool = Field(default=False, description="SMS уведомления")
+    push_notifications: bool = Field(default=True, description="Push уведомления")
+    marketing_consent: bool = Field(default=False, description="Согласие на маркетинг")
+
+
+class UserStatsSchema(BaseSchema):
+    """
+    Схема статистики пользователя.
+
+    Содержит аналитическую информацию о активности пользователя.
+    Используется для дашбордов, отчетов и аналитики.
+
+    Attributes:
+        total_orders: Общее количество заказов
+        total_spent: Общая потраченная сумма
+        last_order_date: Дата последнего заказа
+        last_login: Время последнего входа
+        registration_source: Источник регистрации
+        referral_code: Реферальный код пользователя
+        referred_users_count: Количество приглашенных пользователей
+
+    Usage:
+        ```python
+        # GET /api/v1/profile/stats - статистика для пользователя
+        @router.get("/profile/stats", response_model=UserStatsSchema)
+        async def get_user_stats(
+            current_user: CurrentUserSchema = Depends(get_current_user)
+        ):
+            return await stats_service.get_user_stats(current_user.id)
+
+        # GET /api/v1/admin/users/{user_id}/stats - статистика для админа
+        @router.get("/admin/users/{user_id}/stats", response_model=UserStatsSchema)
+        async def get_user_stats_admin(
+            user_id: int,
+            current_user: CurrentUserSchema = Depends(get_admin_user)
+        ):
+            return await stats_service.get_user_stats(user_id)
+        ```
+    """
+
+    total_orders: int = Field(default=0, description="Общее количество заказов")
+    total_spent: Decimal = Field(
+        default=Decimal("0.00"), description="Общая потраченная сумма"
+    )
+    last_order_date: Optional[datetime] = Field(
+        default=None, description="Дата последнего заказа"
+    )
+    last_login: Optional[datetime] = Field(
+        default=None, description="Время последнего входа"
+    )
+    registration_source: Optional[str] = Field(
+        default=None, description="Источник регистрации"
+    )
+    referral_code: Optional[str] = Field(default=None, description="Реферальный код")
+    referred_users_count: int = Field(
+        default=0, description="Количество приглашенных пользователей"
+    )

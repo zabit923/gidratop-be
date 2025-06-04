@@ -24,7 +24,7 @@ from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.connections.database import get_db_session
+from app.core.dependencies import get_db_session
 from app.core.exceptions import (InvalidCredentialsError, TokenError,
                                  TokenInvalidError, TokenMissingError)
 from app.core.security.token import TokenManager

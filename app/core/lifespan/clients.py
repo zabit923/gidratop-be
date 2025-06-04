@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import FastAPI
 
-from app.core.connections.base import BaseClient
+from app.core.connections import BaseClient
 from app.core.lifespan.base import (register_shutdown_handler,
                                     register_startup_handler)
 
@@ -16,8 +16,7 @@ class ClientsManager(BaseClient):
 
     async def connect(self) -> None:
         """Инициализирует и подключает все клиенты"""
-        from app.core.connections.cache import RedisClient
-        from app.core.connections.messaging import RabbitMQClient
+        from app.core.connections import RedisClient, RabbitMQClient
 
         # Инициализируем клиентов
         self.clients = [RedisClient(), RabbitMQClient()]

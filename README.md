@@ -1,5 +1,46 @@
 # Gidrator
 
+## 🛠️ Технологический стек
+
+#### Управление зависимостями
+[![uv](https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=python&logoColor=white)](https://docs.astral.sh/uv/)
+
+#### Backend
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Uvicorn](https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=gunicorn&logoColor=white)](https://www.uvicorn.org/)
+
+#### База данных
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/docs/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/docs/)
+[![Alembic](https://img.shields.io/badge/Alembic-6BA81E?style=for-the-badge&logo=sqlalchemy&logoColor=white)](https://alembic.sqlalchemy.org/)
+
+#### Очереди и сообщения, стриминг
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/docs)
+[![FastStream](https://img.shields.io/badge/FastStream-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://faststream.airt.ai/)
+
+#### Инфраструктура
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/)
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+
+#### Инструменты разработки
+[![pgAdmin](https://img.shields.io/badge/pgAdmin-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.pgadmin.org/docs/)
+[![Redis Commander](https://img.shields.io/badge/Redis_Commander-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://github.com/joeferner/redis-commander)
+
+#### Облачные сервисы
+[![Yandex Cloud](https://img.shields.io/badge/Yandex_Cloud-5282FF?style=for-the-badge&logo=yandex&logoColor=white)](https://yandex.cloud/docs/)
+[![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white)](https://docs.aws.amazon.com/s3/)
+
+#### Безопасность и аутентификация
+[![Argon2](https://img.shields.io/badge/Argon2-000000?style=for-the-badge&logo=security&logoColor=white)](https://argon2-cffi.readthedocs.io/)
+[![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://pyjwt.readthedocs.io/)
+
+#### Качество кода
+[![Black](https://img.shields.io/badge/Black-000000?style=for-the-badge&logo=python&logoColor=white)](https://black.readthedocs.io/)
+[![MyPy](https://img.shields.io/badge/MyPy-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://mypy.readthedocs.io/)
+[![Flake8](https://img.shields.io/badge/Flake8-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://flake8.pycqa.org/)
+[![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org/)
+
 ## Установка
 
 Клонируйте репозиторий в директорию, в которой находитесь:
@@ -30,12 +71,52 @@ cp .env.example .env.dev
 
 Отредактируйте файл .env.dev, заполнив следующие обязательные параметры:
 
+### Настройки JWT и безопасности
+- `TOKEN_SECRET_KEY` - секретный ключ для подписи JWT токенов (обязательно!)
+- `COOKIE_DOMAIN` - домен для cookies (localhost для разработки)
+
 ### Настройки базы данных PostgreSQL
 - `POSTGRES_USER` - имя пользователя PostgreSQL
 - `POSTGRES_PASSWORD` - пароль пользователя PostgreSQL
 - `POSTGRES_HOST` - хост базы данных (обычно localhost для разработки)
 - `POSTGRES_PORT` - порт PostgreSQL (по умолчанию 5432)
 - `POSTGRES_DB` - имя базы данных
+
+### Настройки pgAdmin
+- `PGADMIN_DEFAULT_EMAIL` - email пользователя pgAdmin
+- `PGADMIN_DEFAULT_PASSWORD` - пароль пользователя pgAdmin
+
+### Настройки Redis
+- `REDIS_PASSWORD` - пароль для Redis
+- `REDIS_PORT` - порт Redis (по умолчанию 6379)
+
+### Настройки RabbitMQ
+- `RABBITMQ_USER` - имя пользователя RabbitMQ
+- `RABBITMQ_PASS` - пароль пользователя RabbitMQ
+- `RABBITMQ_HOST` - хост RabbitMQ
+- `RABBITMQ_PORT` - порт RabbitMQ (по умолчанию 5672)
+- `RABBITMQ_EXCHANGE` - имя exchange для сообщений
+
+### Настройки SMTP (для отправки email)
+- `SMTP_USERNAME` - имя пользователя SMTP
+- `SMTP_PASSWORD` - пароль SMTP
+- `SMTP_PORT` - порт SMTP (по умолчанию 587)
+
+### Настройки AWS S3
+- `AWS_SERVICE_NAME` - имя сервиса AWS (s3)
+- `AWS_REGION` - регион AWS (ru-central1)
+- `AWS_ENDPOINT` - endpoint AWS (https://storage.yandexcloud.net)
+- `AWS_BUCKET_NAME` - имя бакета AWS
+- `AWS_ACCESS_KEY_ID` - ключ доступа AWS
+- `AWS_SECRET_ACCESS_KEY` - секретный ключ доступа AWS
+
+### Настройки CORS
+- `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["*"])
+
+### Настройки логирования
+- `LOGGING__LOG_FORMAT` - формат логов (pretty/json)
+- `LOGGING__LOG_FILE` - путь к файлу логов
+- `LOGGING__LEVEL` - уровень логирования (DEBUG/INFO/WARNING/ERROR)
 
 > [!NOTE]
 > Порт 5432 может быть занят, поэтому его можно изменить на любой другой свободный порт (например, 5433).
@@ -45,22 +126,66 @@ cp .env.example .env.dev
 - `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["http://localhost:3000","http://localhost:5173"])
 
 ### Пример минимальной конфигурации для локальной разработки
-```bash
+```
+# Настройки логирования
+LOGGING__LOG_FORMAT=pretty
+LOGGING__LOG_FILE=./logs/app.log
+LOGGING__LEVEL=DEBUG
+
+# Настройки JWT (ОБЯЗАТЕЛЬНО!)
+TOKEN_SECRET_KEY=your_very_secure_secret_key_here
+COOKIE_DOMAIN=localhost
+
+# SMTP
+SMTP_PORT=587
+SMTP_USERNAME=admin
+SMTP_PASSWORD=admin
+
+# Настройки Redis
+REDIS_PORT=6379
+REDIS_PASSWORD=default
+
+# Настройки базы данных
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+POSTGRES_PORT=5433
 POSTGRES_DB=gidrator_db
 
-ALLOW_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+# Настройки pgAdmin
+PGADMIN_DEFAULT_EMAIL=admin@admin.com
+PGADMIN_DEFAULT_PASSWORD=admin
+
+# RabbitMQ
+RABBITMQ_USER=guest
+RABBITMQ_PASS=guest
+RABBITMQ_PORT=5672
+RABBITMQ_HOST=localhost
+RABBITMQ_EXCHANGE=gidrator
+
+# AWS S3
+AWS_SERVICE_NAME=s3
+AWS_REGION=ru-central1
+AWS_ENDPOINT=https://storage.yandexcloud.net
+AWS_BUCKET_NAME=your_bucket_name
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+
+# Настройки CORS
+ALLOW_ORIGINS=["*"]
+ALLOW_CREDENTIALS=true
+ALLOW_METHODS=["*"]
+ALLOW_HEADERS=["*"]
 ```
+
 > [!IMPORTANT]
-> Никогда не коммитьте файлы .env.dev или другие файлы с реальными учетными данными в репозиторий!
->
-> Убедитесь, что они добавлены в .gitignore.
+> - Никогда не коммитьте файлы .env.dev или другие файлы с реальными учетными данными в репозиторий!
+> - Убедитесь, что они добавлены в .gitignore.
+> - Обязательно замените `TOKEN_SECRET_KEY` на уникальный секретный ключ!
 
 ## Первый запуск
-
+> [!IMPORTANT]
+> Перед использованием этих команд uv должен быть установлен
 ```bash
 uv run activate
 ```
@@ -91,7 +216,7 @@ uv run activate
 - Разработка идёт от `development`
 - В `development` мерджим фичи
 - Тестим на `development`
-- Когда всё ок - мерджим `development` в main
+- Когда всё ок - мерджим `development` в `main`
 
 Если вы хотите внести изменения или улучшения, пожалуйста, следуйте этим шагам:
 
