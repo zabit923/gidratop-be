@@ -34,6 +34,10 @@ import platform
 import uvicorn
 import threading
 import sys
+import asyncio
+import asyncpg
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 
 class DockerDaemonNotRunningError(Exception):
     """
@@ -55,6 +59,7 @@ class DockerContainerConflictError(Exception):
             self.message = message or "Конфликт имен контейнеров. Удали существующий контейнер или переименуй его."
         super().__init__(self.message)
 
+TEST_ENV_FILE = ".env.test"
 ENV_FILE=".env.dev"
 # Получаем путь к корню проекта
 ROOT_DIR = Path(__file__).parents[1]
@@ -70,19 +75,30 @@ DEFAULT_PORTS = {
     'PGADMIN': 5050,
     'REDIS_COMMANDER': 8081,
 }
+
 def load_env_vars(env_file_path: str = None) -> dict:
     """
     Загружает переменные окружения из .env файла
-
     Args:
-        env_file_path: Путь к файлу .env. Если None, используется ENV_FILE из констант
-
+        env_file_path: Путь к файлу .env. Если None, используется тестовый файл
     Returns:
         dict: Словарь с переменными окружения
     """
     if env_file_path is None:
-        env_file_path = os.path.join(ROOT_DIR, ENV_FILE)
-
+        # Для тестов используем .env.test, если есть, иначе .env.dev
+        test_env_path = ROOT_DIR / TEST_ENV_FILE
+        dev_env_path = ROOT_DIR / ".env.dev"
+        
+        if test_env_path.exists():
+            env_file_path = str(test_env_path)
+            print(f"📋 Используем тестовую конфигурацию: {TEST_ENV_FILE}")
+        elif dev_env_path.exists():
+            env_file_path = str(dev_env_path)
+            print(f"📋 Используем dev конфигурацию: .env.dev")
+        else:
+            print("❌ Не найден файл конфигурации (.env.test или .env.dev)")
+            return {}
+    
     env_vars = {}
     if os.path.exists(env_file_path):
         with open(env_file_path, encoding="utf-8") as f:
@@ -90,10 +106,15 @@ def load_env_vars(env_file_path: str = None) -> dict:
                 if line.strip() and not line.startswith('#'):
                     try:
                         key, value = line.strip().split('=', 1)
+                        # Убираем кавычки если есть
+                        value = value.strip('"\'')
                         env_vars[key] = value
                     except ValueError:
                         # Пропускаем некорректные строки
                         pass
+    else:
+        print(f"❌ Файл конфигурации не найден: {env_file_path}")
+    
     return env_vars
 
 def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WITHOUT_BACKEND, env: dict = None) -> None:
@@ -1010,12 +1031,18 @@ async def create_test_database_async():
     
     db_config = load_env_vars()
     
+    if not db_config:
+        print("❌ Не удалось загрузить конфигурацию БД")
+        return False
+    
     user = db_config.get('POSTGRES_USER', 'postgres')
     password = db_config.get('POSTGRES_PASSWORD', '')
     host = db_config.get('POSTGRES_HOST', 'localhost')
-    port = db_config.get('POSTGRES_PORT', '5432')
+    port = int(db_config.get('POSTGRES_PORT', '5432'))
     db_name = db_config.get('POSTGRES_DB', 'gidrator_db')
     test_db_name = f"{db_name}_test"
+    
+    print(f"🔍 Подключение к {host}:{port} как {user}")
     
     try:
         # Подключаемся к postgres БД для создания тестовой БД
@@ -1034,7 +1061,7 @@ async def create_test_database_async():
         # Создаем тестовую БД
         await conn.execute(f'CREATE DATABASE "{test_db_name}"')
         print(f"✅ Тестовая база данных {test_db_name} создана!")
-        
+                
         await conn.close()
         
         # Выводим информацию о подключении
