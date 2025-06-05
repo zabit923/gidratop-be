@@ -1,15 +1,21 @@
-from typing import List
+from typing import Optional
 
 from fastapi import Depends
+from fastapi.params import Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from app.core.connections.database import get_db_session
+from app.core.dependencies import get_db_session
 from app.core.security.auth import get_current_user
 from app.models import UserModel
 from app.routes.base import BaseRouter
-from app.schemas.v1.categories.request import CategoryCreateSchema
-from app.schemas.v1.categories.response import CategoryResponseSchema
+from app.schemas import (
+    CategoryCreateSchema,
+    CategoryListResponseSchema,
+    CategoryResponseSchema,
+    Page,
+    PaginationParams,
+)
 from app.services.v1.categories.service import CategoryService
 
 
@@ -33,14 +39,38 @@ class CategoryRouter(BaseRouter):
 
         @self.router.get(
             path="",
-            response_model=List[CategoryResponseSchema],
+            response_model=CategoryListResponseSchema,
             status_code=status.HTTP_200_OK,
             summary="Получение всех категорий",
         )
         async def get_all_categories(
+            skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
+            limit: int = Query(
+                10, ge=1, le=100, description="Количество элементов на странице"
+            ),
+            search: Optional[str] = Query(
+                None, description="Поиск по данным категории"
+            ),
             session: AsyncSession = Depends(get_db_session),
-        ) -> List[CategoryResponseSchema]:
-            return await CategoryService(session).get_all_categories()
+        ) -> CategoryListResponseSchema:
+            """
+            ### Args:
+            * **skip**: Количество пропускаемых элементов
+            * **limit**: Количество элементов на странице (от 1 до 100)
+            * **search**: Строка поиска по данным категории
+            """
+            pagination = PaginationParams(skip=skip, limit=limit)
+            categories, total = await CategoryService(session).get_all_categories(
+                pagination=pagination,
+                search=search,
+            )
+            page = Page(
+                items=categories,
+                total=total,
+                page=pagination.page,
+                size=pagination.limit,
+            )
+            return CategoryListResponseSchema(data=page)
 
         @self.router.patch(
             path="/{category_id}",
@@ -69,3 +99,15 @@ class CategoryRouter(BaseRouter):
             session: AsyncSession = Depends(get_db_session),
         ) -> CategoryResponseSchema:
             return await CategoryService(session).get_category_by_id(category_id)
+
+        @self.router.delete(
+            path="/{category_id}",
+            status_code=status.HTTP_204_NO_CONTENT,
+            summary="Удаление категории по ID",
+        )
+        async def delete_category(
+            category_id: int,
+            user: UserModel = Depends(get_current_user),
+            session: AsyncSession = Depends(get_db_session),
+        ) -> None:
+            await CategoryService(session).delete_category(user, category_id)

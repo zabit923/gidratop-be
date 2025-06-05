@@ -5,8 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Category
-from app.schemas import CategoryDataSchema
-from app.schemas.v1.categories.request import CategoryCreateSchema, CategoryUpdateSchema
+from app.schemas import (
+    CategoryCreateSchema,
+    CategoryDataSchema,
+    CategoryUpdateSchema,
+    PaginationParams,
+)
 from app.services.v1.base import BaseEntityManager
 
 
@@ -42,12 +46,22 @@ class CategoryDataManager(BaseEntityManager[CategoryDataSchema]):
             setattr(category, key, value)
         return await self.update_one(category)
 
-    async def get_all_categories(self) -> List[Category]:
-        statement = select(Category).options(
-            selectinload(Category.children),
-            selectinload(Category.parent),
+    async def get_all_categories(
+        self,
+        pagination: PaginationParams,
+        search: str = None,
+    ) -> List[Category]:
+        statement = (
+            select(Category)
+            .options(
+                selectinload(Category.children),
+                selectinload(Category.parent),
+            )
+            .distinct()
         )
-        return await self.get_all(statement)
+        if search:
+            statement = statement.filter(self.model.title.ilike(f"%{search}%"))
+        return await self.get_paginated_items(statement, pagination)
 
     async def get_category_by_id(self, category_id: int) -> Category:
         statement = (

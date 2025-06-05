@@ -27,7 +27,14 @@ from .v1.base import (
     ItemResponseSchema,
     ListResponseSchema,
 )
-from .v1.categories.base import CategoryDataSchema
+from .v1.categories import (
+    CategoryCreateSchema,
+    CategoryDataSchema,
+    CategoryDeleteResponseSchema,
+    CategoryListResponseSchema,
+    CategoryResponseSchema,
+    CategoryUpdateSchema,
+)
 from .v1.errors import RateLimitErrorSchema, RateLimitExceededResponseSchema
 from .v1.mail import (
     EmailMessageSchema,
@@ -107,7 +114,6 @@ __all__ = [
     "RegistrationDataSchema",
     "RegistrationResponseSchema",
     "RegistrationRequestSchema",
-    "CategoryDataSchema",
     "ProductDataSchema",
     "ResendVerificationRequestSchema",
     "VerificationDataSchema",
@@ -150,4 +156,11 @@ __all__ = [
     "ProfileNotFoundResponseSchema",
     "UserNotFoundResponseSchema",
     "InvalidCurrentPasswordResponseSchema",
+    # Categories
+    "CategoryDataSchema",
+    "CategoryListResponseSchema",
+    "CategoryCreateSchema",
+    "CategoryUpdateSchema",
+    "CategoryResponseSchema",
+    "CategoryDeleteResponseSchema",
 ]

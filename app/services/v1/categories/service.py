@@ -3,8 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import CategoryAlreadyExistsError, CategoryNotFoundError
 from app.core.exceptions.users import ForbiddenError
 from app.models import UserModel
-from app.schemas.v1.categories.request import CategoryCreateSchema
-from app.schemas.v1.categories.response import CategoryResponseSchema
+from app.schemas import CategoryCreateSchema, CategoryResponseSchema, PaginationParams
 from app.services.v1.base import BaseService
 from app.services.v1.categories.data_manager import CategoryDataManager
 
@@ -73,9 +72,16 @@ class CategoryService(BaseService):
         updated_category = await self.data_manager.update_category(category, data)
         return CategoryResponseSchema.model_validate(updated_category)
 
-    async def get_all_categories(self) -> list[CategoryResponseSchema]:
-        categories = await self.data_manager.get_all_categories()
-        return [CategoryResponseSchema.model_validate(cat) for cat in categories]
+    async def get_all_categories(
+        self,
+        pagination: PaginationParams,
+        search: str = None,
+    ) -> list[CategoryResponseSchema]:
+        categories, total = await self.data_manager.get_all_categories(
+            pagination=pagination,
+            search=search,
+        )
+        return [CategoryResponseSchema.model_validate(cat) for cat in categories], total
 
     async def get_category_by_id(self, category_id: int) -> CategoryResponseSchema:
         category = await self.data_manager.get_category_by_id(category_id)
@@ -84,3 +90,16 @@ class CategoryService(BaseService):
                 field="id", value=category_id, detail="Категория не найдена"
             )
         return CategoryResponseSchema.model_validate(category)
+
+    async def delete_category(self, user: UserModel, category_id: int) -> None:
+        if not user.role.MODERATOR:
+            raise ForbiddenError(
+                detail="Недостаточно прав для обновления категории",
+                required_role="MODERATOR",
+            )
+        category = await self.data_manager.get_category_by_id(category_id)
+        if not category:
+            raise CategoryNotFoundError(
+                field="id", value=category_id, detail="Категория не найдена"
+            )
+        await self.data_manager.delete_item(category_id)

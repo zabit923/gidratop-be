@@ -20,9 +20,15 @@ from app.core.dependencies import get_db_session, get_redis_client
 from app.core.security.auth import get_current_user
 from app.models import UserRole
 from app.routes.base import BaseRouter
-from app.schemas import (CurrentUserSchema, Page, PaginationParams,
-                         UserListResponseSchema, UserSortFields,
-                         TokenMissingResponseSchema, ForbiddenResponseSchema)
+from app.schemas import (
+    CurrentUserSchema,
+    ForbiddenResponseSchema,
+    Page,
+    PaginationParams,
+    TokenMissingResponseSchema,
+    UserListResponseSchema,
+    UserSortFields,
+)
 from app.services.v1.users.service import UserService
 
 

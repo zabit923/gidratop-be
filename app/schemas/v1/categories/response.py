@@ -1,11 +1,9 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from pydantic import Field
 
-from app.schemas import BaseSchema
-
-if TYPE_CHECKING:
-    pass
+from app.schemas import BaseResponseSchema, BaseSchema
+from app.schemas.v1.pagination import Page
 
 
 class CategoryResponseSchema(BaseSchema):
@@ -63,3 +61,29 @@ class CategoryShortResponseSchema(BaseSchema):
             "Книги разных жанров",
         ],
     )
+
+
+class CategoryListResponseSchema(BaseResponseSchema):
+    """
+    Схема ответа для списка категорий товаров.
+    Содержит общее количество категорий и список категорий.
+
+    Attributes:
+        message (str): Сообщение о результате операции
+        data (Page[CategoryResponseSchema]): Список пользователей
+    """
+
+    message: str = "Список категорий успешно получен"
+    data: Page[CategoryShortResponseSchema]
+
+
+class CategoryDeleteResponseSchema(BaseResponseSchema):
+    """
+    Схема ответа для удаления категории товаров.
+    Содержит сообщение об успешном удалении категории.
+
+    Attributes:
+        message (str): Сообщение о результате операции
+    """
+
+    message: str = "Категория успешно удалена"

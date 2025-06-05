@@ -5,8 +5,8 @@ from starlette.responses import Response
 from starlette_admin.auth import AdminConfig, AuthProvider
 from starlette_admin.exceptions import LoginFailed
 
-from app.core.connections.cache import get_redis_client
 from app.core.connections.database import get_db_session
+from app.core.dependencies import get_redis_client
 from app.core.security.password import PasswordHasher
 from app.services.v1.auth.service import AuthService
 
