@@ -907,97 +907,149 @@ def test():
     except subprocess.CalledProcessError:
         pass
 
-def create_test_database():
+# def create_test_database():
+#     """
+#     Создает тестовую базу данных для pytest.
+
+#     Использует настройки из .env.dev, но создает базу с суффиксом _test.
+#     Поддерживает как Docker, так и прямое подключение к PostgreSQL.
+
+#     Returns:
+#         bool: True при успехе, False при ошибке
+#     """
+#     print("🛠️ Создаю тестовую базу данных...")
+
+#     # Получаем данные из переменных окружения
+#     db_config = load_env_vars()
+
+#     # Получаем имя контейнера PostgreSQL динамически
+#     postgres_container = get_postgres_container_name()
+#     print(f"🔍 Используем PostgreSQL: {postgres_container}")
+
+#     # Извлекаем настройки БД
+#     user = db_config.get('POSTGRES_USER', 'postgres')
+#     password = db_config.get('POSTGRES_PASSWORD', '')
+#     host = db_config.get('POSTGRES_HOST', 'localhost')
+#     port = db_config.get('POSTGRES_PORT', '5432')
+#     db_name = db_config.get('POSTGRES_DB', 'gidrator_db')
+#     test_db_name = f"{db_name}_test"
+
+#     try:
+#         # Проверяем, доступен ли Docker
+#         which_docker = subprocess.run(["which", "docker"], capture_output=True)
+#         docker_available = which_docker.returncode == 0
+
+#         if docker_available and postgres_container != "postgres":
+#             # Метод с использованием Docker
+#             print(f"🐳 Создаю тестовую БД через Docker контейнер: {postgres_container}")
+            
+#             # Удаляем существующую тестовую БД если есть
+#             subprocess.run(
+#                 ["docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
+#                 f"DROP DATABASE IF EXISTS {test_db_name};"],
+#                 capture_output=True, text=True
+#             )
+            
+#             # Создаем тестовую БД
+#             create_cmd = [
+#                 "docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
+#                 f"CREATE DATABASE {test_db_name};"
+#             ]
+#             result = subprocess.run(create_cmd, capture_output=True, text=True)
+            
+#             if result.returncode == 0:
+#                 print(f"✅ Тестовая база данных {test_db_name} создана в контейнере!")
+#             else:
+#                 print(f"❌ Ошибка создания БД в контейнере: {result.stderr}")
+#                 return False
+#         else:
+#             # Прямое подключение через psql
+#             print(f"🔄 Создаю тестовую БД напрямую через psql...")
+
+#             # Формируем команду для работы с БД
+#             psql_command = f"psql -U {user} -h {host} -p {port}"
+#             if password:
+#                 env = os.environ.copy()
+#                 env["PGPASSWORD"] = password
+#             else:
+#                 env = os.environ.copy()
+
+#             # Удаляем существующую тестовую БД если есть
+#             drop_cmd = f"{psql_command} -c \"DROP DATABASE IF EXISTS {test_db_name};\""
+#             subprocess.run(drop_cmd, shell=True, env=env, capture_output=True)
+
+#             # Создаем тестовую БД
+#             create_cmd = f"{psql_command} -c \"CREATE DATABASE {test_db_name};\""
+#             result = subprocess.run(create_cmd, shell=True, env=env, capture_output=True, text=True)
+            
+#             if result.returncode == 0:
+#                 print(f"✅ Тестовая база данных {test_db_name} создана!")
+#             else:
+#                 print(f"❌ Ошибка создания тестовой БД: {result.stderr}")
+#                 return False
+
+#         # Выводим информацию о подключении
+#         test_dsn = f"postgresql://{user}:*******@{host}:{port}/{test_db_name}"
+#         print(f"🔄 Тестовая БД доступна: {test_dsn}")
+
+#         return True
+#     except Exception as e:
+#         print(f"❌ Ошибка при создании тестовой базы данных: {e}")
+#         return False
+
+import asyncio
+import asyncpg
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
+
+async def create_test_database_async():
     """
-    Создает тестовую базу данных для pytest.
-
-    Использует настройки из .env.dev, но создает базу с суффиксом _test.
-    Поддерживает как Docker, так и прямое подключение к PostgreSQL.
-
-    Returns:
-        bool: True при успехе, False при ошибке
+    Создает тестовую базу данных используя asyncpg (без psql).
     """
     print("🛠️ Создаю тестовую базу данных...")
-
-    # Получаем данные из переменных окружения
+    
     db_config = load_env_vars()
-
-    # Получаем имя контейнера PostgreSQL динамически
-    postgres_container = get_postgres_container_name()
-    print(f"🔍 Используем PostgreSQL: {postgres_container}")
-
-    # Извлекаем настройки БД
+    
     user = db_config.get('POSTGRES_USER', 'postgres')
     password = db_config.get('POSTGRES_PASSWORD', '')
     host = db_config.get('POSTGRES_HOST', 'localhost')
     port = db_config.get('POSTGRES_PORT', '5432')
     db_name = db_config.get('POSTGRES_DB', 'gidrator_db')
     test_db_name = f"{db_name}_test"
-
+    
     try:
-        # Проверяем, доступен ли Docker
-        which_docker = subprocess.run(["which", "docker"], capture_output=True)
-        docker_available = which_docker.returncode == 0
-
-        if docker_available and postgres_container != "postgres":
-            # Метод с использованием Docker
-            print(f"🐳 Создаю тестовую БД через Docker контейнер: {postgres_container}")
-            
-            # Удаляем существующую тестовую БД если есть
-            subprocess.run(
-                ["docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
-                f"DROP DATABASE IF EXISTS {test_db_name};"],
-                capture_output=True, text=True
-            )
-            
-            # Создаем тестовую БД
-            create_cmd = [
-                "docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
-                f"CREATE DATABASE {test_db_name};"
-            ]
-            result = subprocess.run(create_cmd, capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                print(f"✅ Тестовая база данных {test_db_name} создана в контейнере!")
-            else:
-                print(f"❌ Ошибка создания БД в контейнере: {result.stderr}")
-                return False
-        else:
-            # Прямое подключение через psql
-            print(f"🔄 Создаю тестовую БД напрямую через psql...")
-
-            # Формируем команду для работы с БД
-            psql_command = f"psql -U {user} -h {host} -p {port}"
-            if password:
-                env = os.environ.copy()
-                env["PGPASSWORD"] = password
-            else:
-                env = os.environ.copy()
-
-            # Удаляем существующую тестовую БД если есть
-            drop_cmd = f"{psql_command} -c \"DROP DATABASE IF EXISTS {test_db_name};\""
-            subprocess.run(drop_cmd, shell=True, env=env, capture_output=True)
-
-            # Создаем тестовую БД
-            create_cmd = f"{psql_command} -c \"CREATE DATABASE {test_db_name};\""
-            result = subprocess.run(create_cmd, shell=True, env=env, capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                print(f"✅ Тестовая база данных {test_db_name} создана!")
-            else:
-                print(f"❌ Ошибка создания тестовой БД: {result.stderr}")
-                return False
-
+        # Подключаемся к postgres БД для создания тестовой БД
+        conn = await asyncpg.connect(
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            database='postgres'  # Подключаемся к системной БД
+        )
+        
+        # Удаляем существующую тестовую БД если есть
+        await conn.execute(f'DROP DATABASE IF EXISTS "{test_db_name}"')
+        print(f"🗑️ Удалена существующая БД {test_db_name} (если была)")
+        
+        # Создаем тестовую БД
+        await conn.execute(f'CREATE DATABASE "{test_db_name}"')
+        print(f"✅ Тестовая база данных {test_db_name} создана!")
+        
+        await conn.close()
+        
         # Выводим информацию о подключении
         test_dsn = f"postgresql://{user}:*******@{host}:{port}/{test_db_name}"
         print(f"🔄 Тестовая БД доступна: {test_dsn}")
-
         return True
+        
     except Exception as e:
         print(f"❌ Ошибка при создании тестовой базы данных: {e}")
         return False
 
-
+def create_test_database():
+    """Синхронная обертка для асинхронной функции"""
+    return asyncio.run(create_test_database_async())
+    
 def start_all():
     """
     Быстрый старт: миграции + сервер без инфраструктуры.
