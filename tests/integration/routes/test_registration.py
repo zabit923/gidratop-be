@@ -9,6 +9,7 @@ class TestRegisterRouter:
     """Тесты для RegisterRouter."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_register_user_success(self, client: AsyncClient):
         """Тест успешной регистрации пользователя."""
         user_data = create_test_user_data()
@@ -44,6 +45,7 @@ class TestRegisterRouter:
             assert response_data["success"] is True
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_register_user_with_cookies(self, client: AsyncClient):
         """Тест регистрации пользователя с использованием cookies."""
         user_data = create_test_user_data()
@@ -77,6 +79,7 @@ class TestRegisterRouter:
             assert response.status_code == 200
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_register_user_invalid_data(self, client: AsyncClient):
         """Тест регистрации с невалидными данными."""
         invalid_data = {
@@ -90,6 +93,7 @@ class TestRegisterRouter:
         assert response.status_code == 422  # Validation error
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_register_user_missing_required_fields(self, client: AsyncClient):
         """Тест регистрации без обязательных полей."""
         incomplete_data = {
@@ -102,6 +106,7 @@ class TestRegisterRouter:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_register_user_password_validation(self, client: AsyncClient):
         """Тест валидации пароля."""
         test_cases = [

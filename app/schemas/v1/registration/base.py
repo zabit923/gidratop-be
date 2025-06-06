@@ -92,12 +92,14 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
         examples=["REF123ABC", "INVITE456", None],
     )
 
-    access_token: str = Field(
+    access_token: Optional[str] = Field(
+        default=None,
         description="Ограниченный JWT токен доступа (до верификации email)",
         examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."]
     )
 
-    refresh_token: str = Field(
+    refresh_token: Optional[str] = Field(
+        default=None,
         description="JWT токен для обновления access токена",
         examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."]
     )

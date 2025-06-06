@@ -128,8 +128,8 @@ class RegisterService(BaseService):
             is_verified=created_user.is_verified,
             created_at=created_user.created_at,
             referral_code=created_user.referral_code,
-            access_token=access_token,
-            refresh_token=refresh_token,
+            access_token=None if use_cookies else access_token,
+            refresh_token=None if use_cookies else refresh_token,
             token_type=settings.TOKEN_TYPE,
             requires_verification=True,
         )

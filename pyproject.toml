@@ -55,15 +55,31 @@ start = "scripts.commands:start_all"
 test = "scripts.commands:test"
 
 [tool.pytest.ini_options]
+addopts = [
+  "-v",
+  "--tb=short",
+  "--strict-markers",
+  "--disable-warnings",
+]
 asyncio_default_fixture_loop_scope = "function"
-asyncio_mode = "strict"
+asyncio_mode = "auto"
 filterwarnings = [
   "ignore::pydantic.PydanticDeprecatedSince20",
+  "ignore::DeprecationWarning",
 ]
 markers = [
-  "integration: marks tests as integration tests",
+  "unit: Unit tests",
+  "integration: Integration tests",
+  "functional: Functional tests",
+  "security: Security tests",
+  "performance: Performance tests",
+  "e2e: End-to-end tests",
+  "slow: marks tests as slow",
 ]
-
+python_classes = ["Test*"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
 [tool.mypy]
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
@@ -74,6 +90,11 @@ module = "app.core.migrations.*"
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=61.0"]
+
+[dependency-groups]
+dev = [
+  "pytest-httpx>=0.35.0",
+]
 
 [tool.pylint.messages_control]
 disable = [

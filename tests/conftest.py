@@ -1,7 +1,10 @@
 """Конфигурация для тестов pytest."""
+from unittest.mock import AsyncMock, patch
 import pytest_asyncio
+import asyncpg
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.main import app
 from app.models.v1.base import BaseModel
@@ -12,75 +15,77 @@ from app.core.settings import settings
 from app.schemas import CurrentUserSchema
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def test_engine():
     """Тестовый движок БД."""
+    test_db_name = f"{settings.POSTGRES_DB}_test"
+
+    # Создаем тестовую БД
+    conn = await asyncpg.connect(
+        host=settings.POSTGRES_HOST,
+        port=settings.POSTGRES_PORT,
+        user=settings.POSTGRES_USER,
+        password=settings.POSTGRES_PASSWORD.get_secret_value(),
+        database='postgres'
+    )
+
+    try:
+        await conn.execute(f'DROP DATABASE IF EXISTS "{test_db_name}"')
+        await conn.execute(f'CREATE DATABASE "{test_db_name}"')
+    finally:
+        await conn.close()
+
+    # Создаем движок без connection pool для тестов
     test_db_url = settings.database_url.replace(
-        settings.POSTGRES_DB,
-        f"{settings.POSTGRES_DB}_test"
+        settings.POSTGRES_DB, test_db_name
     )
 
     engine = create_async_engine(
         test_db_url,
         echo=False,
-        pool_pre_ping=True
+        poolclass=NullPool,  # Отключаем pool для тестов
     )
 
-    import asyncpg
-
-    async def create_test_db():
-        conn = await asyncpg.connect(
-            host=settings.POSTGRES_HOST,
-            port=settings.POSTGRES_PORT,
-            user=settings.POSTGRES_USER,
-            password=settings.POSTGRES_PASSWORD.get_secret_value(),
-            database='postgres'
-        )
-
-        try:
-            exists = await conn.fetchval(
-                "SELECT 1 FROM pg_database WHERE datname = $1",
-                f"{settings.POSTGRES_DB}_test"
-            )
-
-            if not exists:
-                await conn.execute(f'CREATE DATABASE "{settings.POSTGRES_DB}_test"')
-        finally:
-            await conn.close()
-
-    await create_test_db()
-
+    # Создаем таблицы
     async with engine.begin() as conn:
         await conn.run_sync(BaseModel.metadata.create_all)
 
     yield engine
 
-    async with engine.begin() as conn:
-        await conn.run_sync(BaseModel.metadata.drop_all)
-
+    # Очистка
     await engine.dispose()
 
-
-@pytest_asyncio.fixture(scope="session")
-async def session_factory(test_engine):
-    """Фабрика сессий для тестов."""
-    return async_sessionmaker(
-        bind=test_engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
+    # Удаляем тестовую БД
+    conn = await asyncpg.connect(
+        host=settings.POSTGRES_HOST,
+        port=settings.POSTGRES_PORT,
+        user=settings.POSTGRES_USER,
+        password=settings.POSTGRES_PASSWORD.get_secret_value(),
+        database='postgres'
     )
+    try:
+        await conn.execute(f'DROP DATABASE IF EXISTS "{test_db_name}"')
+    finally:
+        await conn.close()
 
 
 @pytest_asyncio.fixture
-async def db_session(session_factory):
-    """Сессия БД для каждого теста."""
-    async with session_factory() as session:
-        transaction = await session.begin()
+async def db_session(test_engine):
+    """Изолированная сессия БД для каждого теста."""
+    connection = await test_engine.connect()
+    transaction = await connection.begin()
 
-        try:
-            yield session
-        finally:
-            await transaction.rollback()
+    session = AsyncSession(
+        bind=connection,
+        expire_on_commit=False
+    )
+
+    try:
+        yield session
+    finally:
+        await session.close()
+        await transaction.rollback()
+        await connection.close()
 
 
 @pytest_asyncio.fixture
@@ -95,6 +100,12 @@ async def mock_user():
         is_verified=True
     )
 
+@pytest_asyncio.fixture(autouse=True)
+async def mock_messaging():
+    """Мокает messaging для тестов."""
+    with patch('app.core.integrations.messaging.producers.broker.publish') as mock_publish:
+        mock_publish.return_value = AsyncMock()
+        yield mock_publish
 
 @pytest_asyncio.fixture
 async def client(db_session):
