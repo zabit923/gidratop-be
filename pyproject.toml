@@ -68,12 +68,12 @@ filterwarnings = [
   "ignore::DeprecationWarning",
 ]
 markers = [
-  "unit: Unit tests",
-  "integration: Integration tests",
-  "functional: Functional tests",
+  "unit: Unit tests (fast, mocked)",
+  "integration: Integration tests (mocked external services)",
+  "functional: Functional tests (real DB, full cycle)",
   "security: Security tests",
   "performance: Performance tests",
-  "e2e: End-to-end tests",
+  "e2e: End-to-end tests (full user scenarios)",
   "slow: marks tests as slow",
 ]
 python_classes = ["Test*"]

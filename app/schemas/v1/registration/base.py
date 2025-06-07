@@ -94,14 +94,16 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
 
     access_token: Optional[str] = Field(
         default=None,
-        description="Ограниченный JWT токен доступа (до верификации email)",
-        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."]
+        description="Ограниченный JWT токен доступа (до верификации email). "
+               "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None]
     )
 
     refresh_token: Optional[str] = Field(
         default=None,
-        description="JWT токен для обновления access токена",
-        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."]
+        description="JWT токен для обновления access токена. "
+               "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None]
     )
 
     token_type: str = Field(
@@ -154,13 +156,17 @@ class VerificationDataSchema(BaseCommonResponseSchema):
         description="Время подтверждения email в формате UTC",
         example="2024-01-15T10:35:00Z",
     )
-    access_token: str = Field(
-        description="Новый полный JWT токен доступа (без ограничений)",
-        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."]
+    access_token: Optional[str] = Field(
+        default=None,
+        description="Новый полный JWT токен доступа (без ограничений). "
+               "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None]
     )
-    refresh_token: str = Field(
-        description="Новый JWT токен для обновления access токена",
-        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."]
+    refresh_token: Optional[str] = Field(
+        default=None,
+        description="Новый JWT токен для обновления access токена. "
+                   "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None]
     )
     token_type: str = Field(
         default="bearer",
