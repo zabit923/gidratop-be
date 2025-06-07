@@ -33,6 +33,14 @@ class CategoryDataSchema(BaseSchema):
             "Книги разных жанров",
         ],
     )
+    image: Optional[str] = Field(
+        default=None,
+        description="Ссылка на изображение категории",
+        examples=[
+            "https://example.com/images/electronics.jpg",
+            "https://example.com/images/clothing.jpg",
+        ],
+    )
     parent_id: Optional[int] = Field(
         default=None,
         description="ID родительской категории",

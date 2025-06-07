@@ -30,6 +30,11 @@ class CategoryResponseSchema(BaseSchema):
             "Книги разных жанров",
         ],
     )
+    image: Optional[str] = Field(
+        default=None,
+        description="URL изображения категории",
+        examples=["https://example.com/image.jpg", "https://example.com/image.png"],
+    )
     parent: Optional["CategoryShortResponseSchema"] = Field(
         default=None, description="Родительская категория (если есть)"
     )
@@ -52,14 +57,10 @@ class CategoryShortResponseSchema(BaseSchema):
     title: str = Field(
         description="Название категории", examples=["Электроника", "Одежда", "Книги"]
     )
-    description: Optional[str] = Field(
+    image: Optional[str] = Field(
         default=None,
-        description="Описание категории",
-        examples=[
-            "Все виды электроники",
-            "Одежда для мужчин и женщин",
-            "Книги разных жанров",
-        ],
+        description="URL изображения категории",
+        examples=["https://example.com/image.jpg", "https://example.com/image.png"],
     )
 
 

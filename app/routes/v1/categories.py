@@ -1,11 +1,12 @@
 from typing import Optional
 
-from fastapi import Depends
+from fastapi import Depends, File, Form, UploadFile
 from fastapi.params import Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from app.core.dependencies import get_db_session
+from app.core.integrations.storage import CategoryS3DataManager, get_category_s3_manager
 from app.core.security.auth import get_current_user
 from app.models import UserModel
 from app.routes.base import BaseRouter
@@ -13,6 +14,7 @@ from app.schemas import (
     CategoryCreateSchema,
     CategoryListResponseSchema,
     CategoryResponseSchema,
+    CategoryUpdateSchema,
     Page,
     PaginationParams,
 )
@@ -80,12 +82,19 @@ class CategoryRouter(BaseRouter):
         )
         async def update_category(
             category_id: int,
-            updated_category: CategoryCreateSchema,
+            title: Optional[str] = Form(None),
+            description: Optional[str] = Form(None),
+            parent_id: Optional[int] = Form(None),
+            image: Optional[UploadFile] = File(None),
             user: UserModel = Depends(get_current_user),
             session: AsyncSession = Depends(get_db_session),
+            s3_data_manager: CategoryS3DataManager = Depends(get_category_s3_manager),
         ) -> CategoryResponseSchema:
-            return await CategoryService(session).update_category(
-                user, category_id, updated_category
+            category_data = CategoryUpdateSchema(
+                title=title, description=description, parent_id=parent_id
+            )
+            return await CategoryService(session, s3_data_manager).update_category(
+                user, category_id, category_data, image
             )
 
         @self.router.get(

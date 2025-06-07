@@ -1,6 +1,7 @@
 from typing import List
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -45,6 +46,24 @@ class CategoryDataManager(BaseEntityManager[CategoryDataSchema]):
         for key, value in category_data_dict.items():
             setattr(category, key, value)
         return await self.update_one(category)
+
+    async def update_image(self, category_id: int, image_url: str) -> None:
+        category = await self.get_item(category_id)
+        if not category:
+            self.logger.error(
+                "Категория с ID %s не найдена при обновлении изображения", category_id
+            )
+            raise ValueError(f"Категория с ID {category_id} не найдена")
+        try:
+            await self.update_items(category_id, {"image": image_url})
+
+        except (ValueError, SQLAlchemyError):
+            self.logger.error(
+                "Не удалось обновить изображение для категории %s", category_id
+            )
+            raise RuntimeError(
+                f"Не удалось обновить изображение для категории {category_id}"
+            )
 
     async def get_all_categories(
         self,

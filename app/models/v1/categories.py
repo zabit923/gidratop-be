@@ -27,6 +27,7 @@ class Category(BaseModel):
 
     title: Mapped[str] = mapped_column(nullable=False, unique=True)
     description: Mapped[str] = mapped_column(nullable=True)
+    image: Mapped[str] = mapped_column(nullable=True, default=None, server_default=None)
     parent_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), nullable=True
     )
