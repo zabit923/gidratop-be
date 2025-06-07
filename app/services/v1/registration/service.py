@@ -218,7 +218,7 @@ class RegisterService(BaseService):
             # Получаем пользователя
             user = await self.data_manager.get_item_by_field("id", user_id)
             if not user:
-                self.logger.warning("Пользователь не найден", extra={"user_id": user_id})
+                self.logger.warning("Пользователь не найден", extra={"user_id": str(user_id)})
                 raise UserNotFoundError(field="id", value=user_id)
 
             # Проверяем, не верифицирован ли уже
@@ -270,7 +270,7 @@ class RegisterService(BaseService):
             await self._send_registration_success_email(user)
 
             self.logger.info(
-                "Email верифицирован, выданы полные токены", extra={"user_id": user_id}
+                "Email верифицирован, выданы полные токены", extra={"user_id": str(user_id)}
             )
 
             verification_data = VerificationDataSchema(

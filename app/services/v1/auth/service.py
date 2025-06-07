@@ -5,7 +5,8 @@
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+import uuid
+from typing import Optional, Union
 from fastapi import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
@@ -211,7 +212,7 @@ class AuthService(BaseService):
 
         return access_token
 
-    async def create_refresh_token(self, user_id: int) -> str:
+    async def create_refresh_token(self, user_id: Union[int, uuid.UUID]) -> str:
         """
         Создание JWT refresh токена.
 
@@ -232,7 +233,7 @@ class AuthService(BaseService):
 
         self.logger.info(
             "Refresh токен создан и сохранен в Redis",
-            extra={"user_id": user_id, "refresh_token_length": len(refresh_token)},
+            extra={"user_id": str(user_id), "refresh_token_length": len(refresh_token)},
         )
 
         return refresh_token
@@ -270,7 +271,7 @@ class AuthService(BaseService):
             ):
                 self.logger.warning(
                     "Попытка использовать неизвестный refresh токен",
-                    extra={"user_id": user_id},
+                    extra={"user_id": str(user_id)},
                 )
                 raise TokenInvalidError()
 
@@ -280,7 +281,7 @@ class AuthService(BaseService):
             if not user_model:
                 self.logger.warning(
                     "Пользователь не найден при обновлении токена",
-                    extra={"user_id": user_id},
+                    extra={"user_id": str(user_id)},
                 )
                 raise UserNotFoundError(field="id", value=user_id)
 
@@ -295,7 +296,7 @@ class AuthService(BaseService):
 
             self.logger.info(
                 "Токены успешно обновлены",
-                extra={"user_id": user_id},
+                extra={"user_id": str(user_id)},
             )
             # token_data = TokenDataSchema(
             #     access_token=access_token,
@@ -347,9 +348,10 @@ class AuthService(BaseService):
                 payload = TokenManager.decode_token(token)
 
                 # Получаем user_id пользователя
-                user_id = payload.get("user_id")
+                user_id_str = payload.get("user_id")
 
-                if user_id:
+                if user_id_str:
+                    user_id = uuid.UUID(user_id_str)
                     await self.redis_data_manager.set_online_status(user_id, False)
 
                     # Удаляем все refresh токены пользователя
@@ -357,7 +359,7 @@ class AuthService(BaseService):
 
                     self.logger.debug(
                         "Пользователь вышел из системы, все токены удалены",
-                        extra={"user_id": user_id, "is_online": False},
+                        extra={"user_id": str(user_id), "is_online": False},
                     )
 
                     # Последнюю активность сохраняем в момент выхода
@@ -481,7 +483,7 @@ class AuthService(BaseService):
             user = await self.data_manager.get_item_by_field("id", user_id)
             if not user:
                 self.logger.warning(
-                    "Пользователь не найден", extra={"user_id": user_id}
+                    "Пользователь не найден", extra={"user_id": str(user_id)}
                 )
                 raise UserNotFoundError(field="id", value=user_id)
 
@@ -493,7 +495,7 @@ class AuthService(BaseService):
                 user_id, {"hashed_password": hashed_password}
             )
 
-            self.logger.info("Пароль успешно изменен", extra={"user_id": user_id})
+            self.logger.info("Пароль успешно изменен", extra={"user_id": str(user_id)})
 
             confirm_data = PasswordResetConfirmDataSchema(
                 password_changed_at=datetime.now(timezone.utc)

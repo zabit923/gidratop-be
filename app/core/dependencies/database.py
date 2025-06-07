@@ -28,7 +28,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
         @router.get("/users/{user_id}")
         async def get_user(
-            user_id: int,
+            user_id: uuid.UUID,
             db: AsyncSession = Depends(get_db_session)
         ):
             result = await db.execute(select(User).where(User.id == user_id))

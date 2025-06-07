@@ -12,10 +12,10 @@
 - CurrentUserSchema: Минимальная схема для JWT токенов
 - UserCredentialsSchema: Для внутренней аутентификации
 """
-
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import EmailStr, Field
 
@@ -164,7 +164,7 @@ class UserPublicSchema(BaseSchema):
         ```python
         # GET /api/v1/users/{user_id} - публичный профиль
         @router.get("/users/{user_id}", response_model=UserPublicSchema)
-        async def get_user_public_profile(user_id: int):
+        async def get_user_public_profile(user_id: uuid.UUID):
             return await user_service.get_public_profile(user_id)
 
         # GET /api/v1/users - список пользователей
@@ -299,7 +299,7 @@ class CurrentUserSchema(CommonBaseSchema):
         ```
     """
 
-    id: int = Field(description="ID пользователя")
+    id: uuid.UUID = Field(description="ID пользователя")
     username: str = Field(description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес")
     role: UserRole = Field(description="Роль пользователя")
@@ -332,7 +332,7 @@ class UserDetailDataSchema(BaseSchema):
         # GET /api/v1/admin/users/{user_id} - детальная информация для админов
         @router.get("/admin/users/{user_id}", response_model=UserDetailDataSchema)
         async def get_user_details_admin(
-            user_id: int,
+            user_id: uuid.UUID,
             current_user: CurrentUserSchema = Depends(get_admin_user)
         ):
             return await admin_service.get_user_details(user_id)
@@ -376,7 +376,7 @@ class UserStatusDataSchema(CommonBaseSchema):
         ```python
         # GET /api/v1/users/{user_id}/status - статус конкретного пользователя
         @router.get("/users/{user_id}/status", response_model=UserStatusDataSchema)
-        async def get_user_status(user_id: int):
+        async def get_user_status(user_id: uuid.UUID):
             return await status_service.get_user_status(user_id)
 
         # WebSocket для реального времени
@@ -461,7 +461,7 @@ class UserCredentialsSchema(CommonBaseSchema):
         Содержит хешированный пароль - только для внутреннего использования.
     """
 
-    id: int = Field(description="Уникальный идентификатор пользователя")
+    id: uuid.UUID = Field(description="Уникальный идентификатор пользователя")
     username: str = Field(description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес пользователя")
     role: UserRole = Field(description="Роль пользователя")
@@ -496,7 +496,7 @@ class UserFinancialDataSchema(BaseSchema):
         # POST /api/v1/admin/users/{user_id}/balance - пополнение баланса админом
         @router.post("/admin/users/{user_id}/balance")
         async def add_balance(
-            user_id: int,
+            user_id: uuid.UUID,
             amount: Decimal,
             current_user: CurrentUserSchema = Depends(get_admin_user)
         ):
@@ -581,7 +581,7 @@ class UserStatsSchema(BaseSchema):
         # GET /api/v1/admin/users/{user_id}/stats - статистика для админа
         @router.get("/admin/users/{user_id}/stats", response_model=UserStatsSchema)
         async def get_user_stats_admin(
-            user_id: int,
+            user_id: uuid.UUID,
             current_user: CurrentUserSchema = Depends(get_admin_user)
         ):
             return await stats_service.get_user_stats(user_id)

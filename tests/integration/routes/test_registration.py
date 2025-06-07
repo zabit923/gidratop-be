@@ -24,6 +24,7 @@ INTEGRATION ТЕСТЫ для роутера регистрации пользо
 4. Проверка HTTP ответа
 5. Проверка вызовов моков
 """
+import uuid
 from unittest.mock import patch, AsyncMock
 import pytest
 from httpx import AsyncClient
@@ -68,7 +69,7 @@ class TestRegisterRouter:
                 "message": "Пользователь успешно зарегистрирован",
                 "data": {
                     "user": {
-                        "id": 1,
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
                         "username": user_data["username"],
                         "email": user_data["email"],
                         "is_verified": False
@@ -112,7 +113,7 @@ class TestRegisterRouter:
                 "message": "Пользователь успешно зарегистрирован",
                 "data": {
                     "user": {
-                        "id": 1,
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
                         "username": user_data["username"],
                         "email": user_data["email"],
                         "is_verified": False
@@ -274,20 +275,20 @@ class TestRegisterRouter:
             # Подробный мок ответ для проверки структуры
             mock_service.create_user.return_value = {
                 "success": True,
-                "message": "Пользователь успешно зарегистрирован",
+                "message": "Регистрация завершена. Подтвердите email для полного доступа.",
                 "data": {
-                    "user": {
-                        "id": 1,
-                        "username": "testuser",
-                        "email": "test@example.com",
-                        "is_verified": False,
-                        "created_at": "2024-01-01T00:00:00Z"
-                    },
-                    "tokens": {
-                        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-                        "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-                        "token_type": "bearer"
-                    }
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "username": user_data["username"],
+                    "email": user_data["email"],
+                    "role": "user",
+                    "is_active": True,
+                    "is_verified": False,
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "referral_code": "REF12345678",
+                    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    "token_type": "bearer",
+                    "requires_verification": True
                 }
             }
 
@@ -300,18 +301,16 @@ class TestRegisterRouter:
             assert_response_structure(response_data, ["success", "message", "data"])
 
             # Проверяем структуру данных пользователя
-            user_data_response = response_data["data"]["user"]
-            required_user_fields = ["id", "username", "email", "is_verified"]
-            for field in required_user_fields:
-                assert field in user_data_response
+            data = response_data["data"]
+            required_fields = ["id", "username", "email", "access_token", "refresh_token", "token_type"]
+            for field in required_fields:
+                assert field in data
 
-            # Проверяем структуру токенов
-            tokens_data = response_data["data"]["tokens"]
-            required_token_fields = ["access_token", "refresh_token"]
-            for field in required_token_fields:
-                assert field in tokens_data
-                assert isinstance(tokens_data[field], str)
-                assert len(tokens_data[field]) > 10  # Токены должны быть не пустыми
+            assert isinstance(data["access_token"], str)
+            assert isinstance(data["refresh_token"], str)
+            assert len(data["access_token"]) > 10
+            assert len(data["refresh_token"]) > 10
+            uuid.UUID(data["id"])  # Проверка, что id это UUID
 
     @pytest.mark.asyncio
     @pytest.mark.integration

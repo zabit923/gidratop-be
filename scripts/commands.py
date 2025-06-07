@@ -60,7 +60,7 @@ class DockerContainerConflictError(Exception):
         super().__init__(self.message)
 
 TEST_ENV_FILE = ".env.test"
-ENV_FILE=".env.dev"
+DEV_ENV_FILE=".env.dev"
 # Получаем путь к корню проекта
 ROOT_DIR = Path(__file__).parents[1]
 
@@ -86,17 +86,18 @@ def load_env_vars(env_file_path: str = None) -> dict:
     """
     if env_file_path is None:
         # Для тестов используем .env.test, если есть, иначе .env.dev
+        dev_env_path = ROOT_DIR / DEV_ENV_FILE
         test_env_path = ROOT_DIR / TEST_ENV_FILE
-        dev_env_path = ROOT_DIR / ".env.dev"
 
-        if test_env_path.exists():
+
+        if dev_env_path.exists():
+            env_file_path = str(dev_env_path)
+            print(f"📋 Используем dev конфигурацию: {DEV_ENV_FILE}")
+        elif test_env_path.exists():
             env_file_path = str(test_env_path)
             print(f"📋 Используем тестовую конфигурацию: {TEST_ENV_FILE}")
-        elif dev_env_path.exists():
-            env_file_path = str(dev_env_path)
-            print(f"📋 Используем dev конфигурацию: .env.dev")
         else:
-            print("❌ Не найден файл конфигурации (.env.test или .env.dev)")
+            print("❌ Не найден файл конфигурации (.env.dev или .env.test)")
             return {}
 
     env_vars = {}
@@ -124,7 +125,7 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
     Args:
         command: Команда для docker-compose
         compose_file: Путь к docker-compose файлу. По умолчанию используется COMPOSE_FILE_WITHOUT_BACKEND из констант
-        env: Переменные окружения для docker-compose. По умолчанию используется ENV_FILE из констант
+        env: Переменные окружения для docker-compose. По умолчанию используется DEV_ENV_FILE из констант
 
     Returns:
         None
@@ -144,15 +145,15 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
         raise FileNotFoundError(f"❌ Файл {compose_file} не найден в {ROOT_DIR}")
 
     # Проверяем наличие .env.dev
-    env_path = os.path.join(ROOT_DIR, ENV_FILE)
+    env_path = os.path.join(ROOT_DIR, DEV_ENV_FILE)
     if not os.path.exists(env_path):
-        print(f"❌ Файл {ENV_FILE} не найден в директории {ROOT_DIR}")
+        print(f"❌ Файл {DEV_ENV_FILE} не найден в директории {ROOT_DIR}")
         print("💡 Создайте файл .env.dev с необходимыми переменными окружения")
-        raise FileNotFoundError(f"❌ Файл {ENV_FILE} не найден. Создайте его перед запуском.")
+        raise FileNotFoundError(f"❌ Файл {DEV_ENV_FILE} не найден. Создайте его перед запуском.")
 
     # Обновляем переменные окружения
     environment = os.environ.copy()
-    # Добавляем переменные из ENV_FILE
+    # Добавляем переменные из DEV_ENV_FILE
     environment.update(load_env_vars())
     if env:
         environment.update(env)
@@ -919,7 +920,7 @@ def test(
         return
 
     env = os.environ.copy()
-    env["ENV_FILE"] = ".env.test"
+    env["DEV_ENV_FILE"] = ".env.test"
 
     cmd = ["pytest", path]
 

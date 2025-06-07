@@ -1,7 +1,8 @@
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+import uuid
+from typing import Optional, Union
 
 from redis import Redis
 
@@ -97,6 +98,8 @@ class AuthRedisDataManager(BaseRedisDataManager):
         for key, value in user_data.items():
             if isinstance(value, datetime):
                 user_data[key] = value.isoformat()
+            elif isinstance(value, uuid.UUID):  # Добавляем обработку UUID
+                user_data[key] = str(value)
         return user_data
 
     async def get_user_from_redis(
@@ -199,7 +202,7 @@ class AuthRedisDataManager(BaseRedisDataManager):
         timestamp = await self.get(f"last_activity:{token}")
         return int(timestamp) if timestamp else 0
 
-    async def set_online_status(self, user_id: int, is_online: bool) -> None:
+    async def set_online_status(self, user_id: Union[int, uuid.UUID], is_online: bool) -> None:
         """
         Устанавливает статус онлайн/офлайн пользователя
 
@@ -211,12 +214,12 @@ class AuthRedisDataManager(BaseRedisDataManager):
             None
         """
         await self.set(
-            key=f"online:{user_id}",
+            key=f"online:{str(user_id)}",
             value=str(is_online),
             expires=settings.USER_INACTIVE_TIMEOUT if is_online else None,
         )
 
-    async def get_online_status(self, user_id: int) -> bool:
+    async def get_online_status(self, user_id: Union[int, uuid.UUID]) -> bool:
         """
         Получает статус онлайн/офлайн пользователя
 
@@ -226,7 +229,7 @@ class AuthRedisDataManager(BaseRedisDataManager):
         Returns:
             bool: Статус онлайн/офлайн пользователя
         """
-        status = await self.get(f"online:{user_id}")
+        status = await self.get(f"online:{str(user_id)}")
 
         if status is None:
             return False
@@ -248,7 +251,7 @@ class AuthRedisDataManager(BaseRedisDataManager):
         """
         return await self.smembers(f"sessions:{email}")
 
-    async def save_refresh_token(self, user_id: int, token: str) -> None:
+    async def save_refresh_token(self, user_id: Union[int, uuid.UUID], token: str) -> None:
         """
         Сохраняет refresh токен в Redis.
 
@@ -260,7 +263,7 @@ class AuthRedisDataManager(BaseRedisDataManager):
             None
         """
         # Ключ для хранения всех refresh токенов пользователя
-        key = f"user:{user_id}:refresh_tokens"
+        key = f"user:{str(user_id)}:refresh_tokens"
 
         # Добавляем токен в множество
         await self.sadd(key, token)
@@ -270,7 +273,7 @@ class AuthRedisDataManager(BaseRedisDataManager):
 
         await self.set_expire(key, settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
 
-    async def check_refresh_token(self, user_id: int, token: str) -> bool:
+    async def check_refresh_token(self, user_id: Union[int, uuid.UUID], token: str) -> bool:
         """
         Проверяет существование refresh токена в Redis.
 
@@ -281,13 +284,13 @@ class AuthRedisDataManager(BaseRedisDataManager):
         Returns:
             bool: True, если токен существует, иначе False
         """
-        key = f"user:{user_id}:refresh_tokens"
+        key = f"user:{str(user_id)}:refresh_tokens"
 
         # Проверяем наличие токена в множестве
         result = await self.sismember(key, token)
         return bool(result)
 
-    async def remove_refresh_token(self, user_id: int, token: str) -> None:
+    async def remove_refresh_token(self, user_id: Union[int, uuid.UUID], token: str) -> None:
         """
         Удаляет refresh токен из Redis.
 
@@ -298,12 +301,12 @@ class AuthRedisDataManager(BaseRedisDataManager):
         Returns:
             None
         """
-        key = f"user:{user_id}:refresh_tokens"
+        key = f"user:{str(user_id)}:refresh_tokens"
 
         # Удаляем токен из множества
         await self.srem(key, token)
 
-    async def remove_all_refresh_tokens(self, user_id: int) -> None:
+    async def remove_all_refresh_tokens(self, user_id: Union[int, uuid.UUID]) -> None:
         """
         Удаляет все refresh токены пользователя из Redis.
 
@@ -313,7 +316,7 @@ class AuthRedisDataManager(BaseRedisDataManager):
         Returns:
             None
         """
-        key = f"user:{user_id}:refresh_tokens"
+        key = f"user:{str(user_id)}:refresh_tokens"
 
         # Удаляем ключ полностью
         await self.delete(key)

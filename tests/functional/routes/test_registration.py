@@ -23,6 +23,7 @@ FUNCTIONAL ТЕСТЫ для роутера регистрации пользо�
 3. Проверка HTTP ответа
 4. Проверка данных в БД (опционально)
 """
+import uuid
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -66,6 +67,7 @@ class TestRegistrationAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+        uuid.UUID(data["data"]["id"])
         assert "message" in data
         assert "data" in data
         assert "access_token" in data["data"]
@@ -127,7 +129,8 @@ class TestRegistrationAPI:
 
         # Проверяем что регистрация прошла успешно
         assert data["success"] is True
-        assert "user_id" in data["data"]
+        assert "id" in data["data"]
+        uuid.UUID(data["data"]["id"])
 
     @pytest.mark.asyncio
     @pytest.mark.functional
