@@ -2,8 +2,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING
-
+import uuid
 from sqlalchemy import ForeignKey, Numeric, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.v1.base import BaseModel
@@ -33,6 +34,7 @@ class UserModel(BaseModel):
     до финансовых данных и настроек уведомлений.
 
     Attributes:
+        id: UUID идентификатор пользователя
         username: Уникальное имя пользователя для входа
         email: Email адрес (уникальный)
         phone: Номер телефона (уникальный, опционально)
@@ -59,7 +61,7 @@ class UserModel(BaseModel):
         marketing_consent: Согласие на маркетинговые рассылки
 
         referral_code: Реферальный код пользователя
-        referred_by_id: ID пользователя, который пригласил
+        referred_by_id: UUID пользователя, который пригласил
 
         total_orders: Общее количество заказов
         total_spent: Общая сумма потраченных денег
@@ -69,7 +71,12 @@ class UserModel(BaseModel):
     """
 
     __tablename__ = "users"
-
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), 
+        primary_key=True, 
+        default=uuid.uuid4,
+        nullable=False
+    )
     # Аутентификация
     username: Mapped[str] = mapped_column(unique=True, nullable=False)
     email: Mapped[str] = mapped_column(unique=True, nullable=False)
@@ -104,7 +111,11 @@ class UserModel(BaseModel):
 
     # Реферальная система
     referral_code: Mapped[str] = mapped_column(unique=True, nullable=True)
-    referred_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
+    referred_by_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), 
+        ForeignKey("users.id"), 
+        nullable=True
+    )
 
     # Статистика
     total_orders: Mapped[int] = mapped_column(default=0)

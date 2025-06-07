@@ -7,7 +7,7 @@
 
 from datetime import datetime
 from typing import Optional
-
+import uuid
 from pydantic import EmailStr, Field
 
 from app.schemas.v1.base import BaseCommonResponseSchema
@@ -22,7 +22,7 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
     данные такие как хешированный пароль.
 
     Attributes:
-        user_id: Уникальный идентификатор пользователя в системе
+        id: Уникальный UUID идентификатор пользователя в системе
         username: Имя пользователя для входа в систему
         email: Email адрес пользователя
         role: Роль пользователя в системе (по умолчанию "user")
@@ -38,7 +38,7 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
     Example:
         ```python
         {
-            "user_id": 123,
+            "id": "550e8400-e29b-41d4-a716-446655440000",
             "username": "john_doe",
             "email": "john@example.com",
             "role": "user",
@@ -54,8 +54,13 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
         ```
     """
 
-    user_id: int = Field(
-        description="Уникальный идентификатор пользователя", examples=[123, 456, 789]
+    id: uuid.UUID = Field(
+        description="Уникальный UUID идентификатор пользователя", 
+        examples=[
+            "550e8400-e29b-41d4-a716-446655440000",
+            "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+            "6ba7b811-9dad-11d1-80b4-00c04fd430c8"
+        ]
     )
 
     username: str = Field(
@@ -124,7 +129,7 @@ class VerificationDataSchema(BaseCommonResponseSchema):
     и новые полные токены доступа после верификации.
 
     Attributes:
-        user_id: ID верифицированного пользователя
+        id: UUID верифицированного пользователя
         email: Верифицированный email адрес
         verified_at: Время подтверждения email в UTC
         access_token: Новый полный JWT токен доступа (без ограничений)
@@ -134,7 +139,7 @@ class VerificationDataSchema(BaseCommonResponseSchema):
     Example:
         ```json
         {
-            "user_id": 123,
+            "id": "550e8400-e29b-41d4-a716-446655440000",
             "email": "john@example.com",
             "verified_at": "2024-01-15T10:35:00Z",
             "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -144,9 +149,9 @@ class VerificationDataSchema(BaseCommonResponseSchema):
         ```
     """
 
-    user_id: int = Field(
-        description="Идентификатор верифицированного пользователя",
-        example=123
+    id: uuid.UUID = Field(
+        description="UUID верифицированного пользователя",
+        example="550e8400-e29b-41d4-a716-446655440000"
     )
     email: EmailStr = Field(
         description="Верифицированный email адрес",

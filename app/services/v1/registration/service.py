@@ -10,6 +10,8 @@ Classes:
 
 from datetime import datetime, timezone
 from typing import Optional
+import uuid
+
 from fastapi import Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -120,7 +122,7 @@ class RegisterService(BaseService):
 
         # Формируем данные ответа
         registration_data = RegistrationDataSchema(
-            user_id=created_user.id,
+            id=created_user.id,
             username=created_user.username,
             email=created_user.email,
             role=created_user.role.value,
@@ -233,7 +235,7 @@ class RegisterService(BaseService):
                     CookieManager.set_auth_cookies(response, access_token, refresh_token)
 
                 verification_data = VerificationDataSchema(
-                    user_id=user_id,
+                    id=user_id,
                     email=user_schema.email,
                     verified_at=datetime.now(timezone.utc),
                     access_token=access_token,
@@ -272,7 +274,7 @@ class RegisterService(BaseService):
             )
 
             verification_data = VerificationDataSchema(
-                user_id=user_id,
+                id=user_id,
                 email=user.email,
                 verified_at=datetime.now(timezone.utc),
                 access_token=access_token,
@@ -309,7 +311,7 @@ class RegisterService(BaseService):
         # Проверка статуса
         if user_model.is_verified:
             verification_data = VerificationDataSchema(
-                user_id=user_model.id,
+                id=user_model.id,
                 verified_at=user_model.updated_at or user_model.created_at,
                 email=user_model.email,
             )
