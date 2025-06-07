@@ -1,12 +1,11 @@
 from typing import Optional
 
-from fastapi.openapi.models import Schema
 from pydantic import Field
 
-from app.schemas import CategoryDataSchema
+from app.schemas import BaseSchema, CategoryDataSchema
 
 
-class ProductDataSchema(Schema):
+class ProductDataSchema(BaseSchema):
     """
     Базовая схема для продуктов.
     Содержит общие поля, которые могут быть использованы в других схемах продуктов.
@@ -27,7 +26,7 @@ class ProductDataSchema(Schema):
     title: str = Field(
         description="Название продукта", examples=["Ноутбук", "Смартфон", "Книга"]
     )
-    description: str = Field(
+    description: Optional[str] = Field(
         default=None,
         description="Описание продукта",
         examples=[
@@ -36,7 +35,7 @@ class ProductDataSchema(Schema):
             "Интересная книга по программированию",
         ],
     )
-    category: "CategoryDataSchema"
+    category: Optional["CategoryDataSchema"] = None
     price: float = Field(description="Цена продукта", examples=[999.99, 499.99, 19.99])
     brand: Optional[str] = Field(
         default=None,

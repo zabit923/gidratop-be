@@ -1,11 +1,8 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from pydantic import Field
 
 from app.schemas import BaseSchema
-
-if TYPE_CHECKING:
-    pass
 
 
 class CategoryDataSchema(BaseSchema):

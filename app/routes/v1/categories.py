@@ -23,7 +23,7 @@ from app.services.v1.categories.service import CategoryService
 
 class CategoryRouter(BaseRouter):
     def __init__(self):
-        super().__init__(prefix="categories", tags=["Категории"])
+        super().__init__(prefix="categories", tags=["Categories"])
 
     def configure(self):
         @self.router.post(

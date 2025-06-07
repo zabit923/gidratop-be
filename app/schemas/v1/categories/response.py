@@ -1,7 +1,5 @@
 from typing import List, Optional
 
-from pydantic import Field
-
 from app.schemas import BaseResponseSchema, BaseSchema
 from app.schemas.v1.pagination import Page
 
@@ -15,32 +13,17 @@ class CategoryResponseSchema(BaseSchema):
         id (int): Уникальный идентификатор категории.
         title (str): Название категории.
         description (Optional[str]): Описание категории (необязательное поле).
+        image (Optional[str]): URL изображения категории (необязательное поле).
+        parent (Optional[CategoryShortResponseSchema]): Родительская категория (необязательное поле).
+        children (Optional[List[CategoryShortResponseSchema]]): Список дочерних категорий (необязательное поле).
     """
 
     id: int
-    title: str = Field(
-        description="Название категории", examples=["Электроника", "Одежда", "Книги"]
-    )
-    description: Optional[str] = Field(
-        default=None,
-        description="Описание категории",
-        examples=[
-            "Все виды электроники",
-            "Одежда для мужчин и женщин",
-            "Книги разных жанров",
-        ],
-    )
-    image: Optional[str] = Field(
-        default=None,
-        description="URL изображения категории",
-        examples=["https://example.com/image.jpg", "https://example.com/image.png"],
-    )
-    parent: Optional["CategoryShortResponseSchema"] = Field(
-        default=None, description="Родительская категория (если есть)"
-    )
-    children: Optional[List["CategoryShortResponseSchema"]] = Field(
-        default=None, description="Дочерние категории (если есть)"
-    )
+    title: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+    parent: Optional["CategoryShortResponseSchema"] = None
+    children: Optional[List["CategoryShortResponseSchema"]] = None
 
 
 class CategoryShortResponseSchema(BaseSchema):
@@ -54,14 +37,8 @@ class CategoryShortResponseSchema(BaseSchema):
     """
 
     id: int
-    title: str = Field(
-        description="Название категории", examples=["Электроника", "Одежда", "Книги"]
-    )
-    image: Optional[str] = Field(
-        default=None,
-        description="URL изображения категории",
-        examples=["https://example.com/image.jpg", "https://example.com/image.png"],
-    )
+    title: str
+    image: Optional[str] = None
 
 
 class CategoryListResponseSchema(BaseResponseSchema):

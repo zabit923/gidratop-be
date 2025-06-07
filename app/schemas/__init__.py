@@ -43,7 +43,12 @@ from .v1.mail import (
     VerificationEmailSchema,
 )
 from .v1.pagination import Page, PaginationParams, UserSortFields
-from .v1.products.base import ProductDataSchema
+from .v1.products import (
+    ProductCreateSchema,
+    ProductDataSchema,
+    ProductListResponseSchema,
+    ProductResponseSchema,
+)
 from .v1.profile import (
     InvalidCurrentPasswordResponseSchema,
     PasswordFormSchema,
@@ -163,4 +168,9 @@ __all__ = [
     "CategoryUpdateSchema",
     "CategoryResponseSchema",
     "CategoryDeleteResponseSchema",
+    # Products
+    "ProductCreateSchema",
+    "ProductDataSchema",
+    "ProductResponseSchema",
+    "ProductListResponseSchema",
 ]

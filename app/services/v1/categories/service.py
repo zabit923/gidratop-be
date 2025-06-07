@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from botocore.exceptions import ClientError
 from fastapi import UploadFile
@@ -146,7 +146,7 @@ class CategoryService(BaseService):
         self,
         pagination: PaginationParams,
         search: str = None,
-    ) -> list[CategoryResponseSchema]:
+    ) -> List[CategoryResponseSchema]:
         categories, total = await self.data_manager.get_all_categories(
             pagination=pagination,
             search=search,
