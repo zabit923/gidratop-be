@@ -28,7 +28,7 @@ import uuid
 from unittest.mock import patch, AsyncMock
 import pytest
 from httpx import AsyncClient
-from tests.utils import create_test_user_data, assert_response_structure
+from tests.utils.helpers import create_test_user_data, assert_response_structure
 
 
 class TestRegisterRouter:
@@ -170,7 +170,7 @@ class TestRegisterRouter:
     async def test_register_user_missing_required_fields(self, client: AsyncClient):
         """
         Тест валидации обязательных полей при регистрации.
-    
+
         Что тестируем:
         1. API возвращает ошибку 422 при отсутствии обязательных полей
         2. Структура ответа соответствует схеме ошибок
@@ -178,10 +178,10 @@ class TestRegisterRouter:
         """
         # Отправляем пустой запрос
         response = await client.post("/api/v1/register", json={})
-        
+
         print(f"Response status: {response.status_code}")
         print(f"Response body: {response.json()}")
-    
+
         assert response.status_code == 422
         response_data = response.json()
 
@@ -190,26 +190,26 @@ class TestRegisterRouter:
         assert response_data["message"] is None
         assert response_data["data"] is None
         assert "error" in response_data
-    
+
         error_data = response_data["error"]
         assert error_data["error_type"] == "validation_error"
         assert error_data["detail"] == "Ошибка валидации данных"
         assert "extra" in error_data
         assert "errors" in error_data["extra"]
-    
+
         # Проверяем список ошибок валидации
         validation_errors = error_data["extra"]["errors"]
         assert isinstance(validation_errors, list)
         assert len(validation_errors) > 0
-    
+
         # Извлекаем поля с ошибками
         error_fields = [err["loc"][-1] for err in validation_errors]
-    
+
         # Проверяем наличие обязательных полей
         required_fields = ["username", "email", "password"]
         for field in required_fields:
             assert field in error_fields, f"Поле '{field}' должно быть в списке ошибок валидации"
-    
+
         # Проверяем, что каждая ошибка содержит необходимые поля
         for error in validation_errors:
             assert "loc" in error, "Каждая ошибка должна содержать поле 'loc'"

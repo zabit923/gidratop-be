@@ -1,4 +1,6 @@
 """Утилиты для тестов."""
+from decimal import Decimal
+from datetime import datetime
 import uuid
 import random
 import string
@@ -6,8 +8,7 @@ from typing import Dict, Any, List
 from httpx import AsyncClient
 from app.models import UserRole
 from app.schemas.v1.users.base import UserSchema
-from decimal import Decimal
-from datetime import datetime
+
 
 
 def create_test_user_data() -> Dict[str, Any]:

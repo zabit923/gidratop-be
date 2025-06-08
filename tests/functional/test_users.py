@@ -2,7 +2,7 @@
 from unittest.mock import patch
 import pytest
 from httpx import AsyncClient
-from tests.utils import assert_response_structure, create_mock_user_data
+from tests.utils.helpers import assert_response_structure, create_mock_user_data
 
 
 class TestUserRouter:

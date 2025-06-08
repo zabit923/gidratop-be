@@ -1,6 +1,7 @@
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
+
 class AuthCookieMiddleware(BaseHTTPMiddleware):
     """
     Middleware для автоматического извлечения токенов из куков

@@ -1,7 +1,7 @@
 import json
 import logging
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime, timezone
 from typing import Optional, Union
 
 from redis import Redis
@@ -202,7 +202,9 @@ class AuthRedisDataManager(BaseRedisDataManager):
         timestamp = await self.get(f"last_activity:{token}")
         return int(timestamp) if timestamp else 0
 
-    async def set_online_status(self, user_id: Union[int, uuid.UUID], is_online: bool) -> None:
+    async def set_online_status(
+        self, user_id: Union[int, uuid.UUID], is_online: bool
+    ) -> None:
         """
         Устанавливает статус онлайн/офлайн пользователя
 
@@ -251,7 +253,9 @@ class AuthRedisDataManager(BaseRedisDataManager):
         """
         return await self.smembers(f"sessions:{email}")
 
-    async def save_refresh_token(self, user_id: Union[int, uuid.UUID], token: str) -> None:
+    async def save_refresh_token(
+        self, user_id: Union[int, uuid.UUID], token: str
+    ) -> None:
         """
         Сохраняет refresh токен в Redis.
 
@@ -273,7 +277,9 @@ class AuthRedisDataManager(BaseRedisDataManager):
 
         await self.set_expire(key, settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
 
-    async def check_refresh_token(self, user_id: Union[int, uuid.UUID], token: str) -> bool:
+    async def check_refresh_token(
+        self, user_id: Union[int, uuid.UUID], token: str
+    ) -> bool:
         """
         Проверяет существование refresh токена в Redis.
 
@@ -290,7 +296,9 @@ class AuthRedisDataManager(BaseRedisDataManager):
         result = await self.sismember(key, token)
         return bool(result)
 
-    async def remove_refresh_token(self, user_id: Union[int, uuid.UUID], token: str) -> None:
+    async def remove_refresh_token(
+        self, user_id: Union[int, uuid.UUID], token: str
+    ) -> None:
         """
         Удаляет refresh токен из Redis.
 

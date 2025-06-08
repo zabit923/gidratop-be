@@ -12,6 +12,7 @@
 Класс `BaseRequestSchema` - если в использоовании общих атрибутов
 из BaseSchema нет необходимости или они будут другие
 """
+
 import uuid
 from datetime import datetime
 from typing import Any, Dict, Generic, List, Optional, TypeVar

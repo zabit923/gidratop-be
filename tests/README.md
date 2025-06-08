@@ -216,7 +216,7 @@ open htmlcov/index.html
 ## Примеры использования
 
 ### Тестирование с реальной БД
-````python
+```python
 async def test_user_creation(client, db_session):
     response = await client.post("/users", json=user_data)
 

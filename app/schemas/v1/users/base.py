@@ -12,6 +12,7 @@
 - CurrentUserSchema: Минимальная схема для JWT токенов
 - UserCredentialsSchema: Для внутренней аутентификации
 """
+
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -20,7 +21,7 @@ from typing import Optional
 from pydantic import EmailStr, Field
 
 from app.models.v1.users import UserRole
-from app.schemas.v1.base import UserBaseSchema, CommonBaseSchema
+from app.schemas.v1.base import CommonBaseSchema, UserBaseSchema
 
 
 class UserSchema(UserBaseSchema):

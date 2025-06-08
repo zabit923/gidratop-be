@@ -5,9 +5,10 @@
 Эти схемы описывают структуру полезной нагрузки ответов регистрации.
 """
 
+import uuid
 from datetime import datetime
 from typing import Optional
-import uuid
+
 from pydantic import EmailStr, Field
 
 from app.schemas.v1.base import BaseCommonResponseSchema
@@ -55,12 +56,12 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
     """
 
     id: uuid.UUID = Field(
-        description="Уникальный UUID идентификатор пользователя", 
+        description="Уникальный UUID идентификатор пользователя",
         examples=[
             "550e8400-e29b-41d4-a716-446655440000",
             "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-            "6ba7b811-9dad-11d1-80b4-00c04fd430c8"
-        ]
+            "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        ],
     )
 
     username: str = Field(
@@ -100,26 +101,23 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
     access_token: Optional[str] = Field(
         default=None,
         description="Ограниченный JWT токен доступа (до верификации email). "
-               "Будет None если используются cookies (use_cookies=true)",
-        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None]
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None],
     )
 
     refresh_token: Optional[str] = Field(
         default=None,
         description="JWT токен для обновления access токена. "
-               "Будет None если используются cookies (use_cookies=true)",
-        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None]
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None],
     )
 
-    token_type: str = Field(
-        default="bearer",
-        description="Тип токена (всегда bearer)"
-    )
+    token_type: str = Field(default="bearer", description="Тип токена (всегда bearer)")
 
     requires_verification: bool = Field(
-        default=True,
-        description="Требуется ли верификация email для полного доступа"
+        default=True, description="Требуется ли верификация email для полного доступа"
     )
+
 
 class VerificationDataSchema(BaseCommonResponseSchema):
     """
@@ -151,11 +149,10 @@ class VerificationDataSchema(BaseCommonResponseSchema):
 
     id: uuid.UUID = Field(
         description="UUID верифицированного пользователя",
-        example="550e8400-e29b-41d4-a716-446655440000"
+        example="550e8400-e29b-41d4-a716-446655440000",
     )
     email: EmailStr = Field(
-        description="Верифицированный email адрес",
-        example="john@example.com"
+        description="Верифицированный email адрес", example="john@example.com"
     )
     verified_at: datetime = Field(
         description="Время подтверждения email в формате UTC",
@@ -164,19 +161,16 @@ class VerificationDataSchema(BaseCommonResponseSchema):
     access_token: Optional[str] = Field(
         default=None,
         description="Новый полный JWT токен доступа (без ограничений). "
-               "Будет None если используются cookies (use_cookies=true)",
-        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None]
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None],
     )
     refresh_token: Optional[str] = Field(
         default=None,
         description="Новый JWT токен для обновления access токена. "
-                   "Будет None если используются cookies (use_cookies=true)",
-        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None]
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None],
     )
-    token_type: str = Field(
-        default="bearer",
-        description="Тип токена (всегда bearer)"
-    )
+    token_type: str = Field(default="bearer", description="Тип токена (всегда bearer)")
 
 
 class ResendVerificationDataSchema(BaseCommonResponseSchema):
@@ -203,6 +197,7 @@ class ResendVerificationDataSchema(BaseCommonResponseSchema):
         description="Время действия токена верификации в секундах", example=3600
     )
 
+
 class VerificationStatusDataSchema(BaseCommonResponseSchema):
     """
     Данные статуса верификации email.
@@ -224,15 +219,11 @@ class VerificationStatusDataSchema(BaseCommonResponseSchema):
         }
         ```
     """
+
     email: EmailStr = Field(
-        description="Проверяемый email адрес",
-        example="john@example.com"
+        description="Проверяемый email адрес", example="john@example.com"
     )
-    is_verified: bool = Field(
-        description="Статус верификации email",
-        example=True
-    )
+    is_verified: bool = Field(description="Статус верификации email", example=True)
     checked_at: datetime = Field(
-        description="Время проверки статуса в UTC",
-        example="2024-01-15T10:45:00Z"
+        description="Время проверки статуса в UTC", example="2024-01-15T10:45:00Z"
     )

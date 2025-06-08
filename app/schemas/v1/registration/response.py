@@ -45,6 +45,7 @@ class RegistrationResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: RegistrationDataSchema
 
 
@@ -76,6 +77,7 @@ class VerificationResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: VerificationDataSchema
 
 
@@ -104,6 +106,7 @@ class ResendVerificationResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: ResendVerificationDataSchema
 
 
@@ -132,4 +135,5 @@ class VerificationStatusResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: VerificationStatusDataSchema

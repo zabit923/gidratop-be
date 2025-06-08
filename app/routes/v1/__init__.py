@@ -1,9 +1,10 @@
 from app.routes.base import BaseRouter
 from app.routes.v1.auth import AuthRouter
+from app.routes.v1.profile import ProfileRouter
 from app.routes.v1.registration import RegisterRouter
 from app.routes.v1.users import UserRouter
 from app.routes.v1.verification import VerificationRouter
-from app.routes.v1.profile import ProfileRouter
+
 
 class APIv1(BaseRouter):
     def configure_routes(self):

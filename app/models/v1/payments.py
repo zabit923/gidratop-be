@@ -1,8 +1,9 @@
+import uuid
 from enum import Enum
 from typing import TYPE_CHECKING
-import uuid
-from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.v1.base import BaseModel
@@ -45,9 +46,7 @@ class PaymentMethod(BaseModel):
     __tablename__ = "payment_methods"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
 
     # Основная информация

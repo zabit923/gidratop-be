@@ -1,9 +1,10 @@
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING
-import uuid
-from sqlalchemy import ForeignKey, Numeric, DateTime
+
+from sqlalchemy import DateTime, ForeignKey, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -72,10 +73,7 @@ class UserModel(BaseModel):
 
     __tablename__ = "users"
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), 
-        primary_key=True, 
-        default=uuid.uuid4,
-        nullable=False
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False
     )
     # Аутентификация
     username: Mapped[str] = mapped_column(unique=True, nullable=False)
@@ -112,9 +110,7 @@ class UserModel(BaseModel):
     # Реферальная система
     referral_code: Mapped[str] = mapped_column(unique=True, nullable=True)
     referred_by_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), 
-        ForeignKey("users.id"), 
-        nullable=True
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
 
     # Статистика

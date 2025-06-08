@@ -16,7 +16,9 @@ class ProfileUpdateSchema(BaseRequestSchema):
     """
 
     first_name: str = Field(min_length=0, max_length=50, description="Имя пользователя")
-    last_name: str = Field(min_length=0, max_length=50, description="Фамилия пользователя")
+    last_name: str = Field(
+        min_length=0, max_length=50, description="Фамилия пользователя"
+    )
     email: EmailStr = Field(description="Email пользователя")
     phone: str | None = Field(
         None,

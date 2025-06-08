@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING
 import uuid
-from sqlalchemy.dialects.postgresql import UUID
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.v1.base import BaseModel
@@ -41,9 +42,7 @@ class UserAddress(BaseModel):
     __tablename__ = "user_addresses"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
 
     # Название адреса

@@ -8,19 +8,20 @@ Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
 
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
-import uuid
 
 from fastapi import Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import UserNotFoundError, TokenExpiredError, TokenInvalidError
+from app.core.exceptions import (TokenExpiredError, TokenInvalidError,
+                                 UserNotFoundError)
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.integrations.mail import AuthEmailDataManager
-from app.core.security.token import TokenManager
 from app.core.security.cookies import CookieManager
+from app.core.security.token import TokenManager
 from app.core.settings import settings
 from app.models import UserModel
 from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
@@ -28,7 +29,8 @@ from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
                          ResendVerificationDataSchema,
                          ResendVerificationResponseSchema,
                          UserCredentialsSchema, VerificationDataSchema,
-                         VerificationStatusDataSchema, VerificationResponseSchema,
+                         VerificationResponseSchema,
+                         VerificationStatusDataSchema,
                          VerificationStatusResponseSchema)
 from app.services.v1.base import BaseService
 
@@ -67,7 +69,7 @@ class RegisterService(BaseService):
         self,
         user_data: RegistrationRequestSchema,
         response: Optional[Response] = None,
-        use_cookies: bool = False
+        use_cookies: bool = False,
     ) -> RegistrationResponseSchema:
         """
         Создает нового пользователя и отправляет письмо верификации.
@@ -180,10 +182,7 @@ class RegisterService(BaseService):
             )
 
     async def verify_email(
-        self,
-        token: str,
-        response: Optional[Response] = None,
-        use_cookies: bool = False
+        self, token: str, response: Optional[Response] = None, use_cookies: bool = False
     ) -> VerificationResponseSchema:
         """
         Подтверждает email пользователя и выдает полные токены.
@@ -218,7 +217,9 @@ class RegisterService(BaseService):
             # Получаем пользователя
             user = await self.data_manager.get_item_by_field("id", user_id)
             if not user:
-                self.logger.warning("Пользователь не найден", extra={"user_id": str(user_id)})
+                self.logger.warning(
+                    "Пользователь не найден", extra={"user_id": str(user_id)}
+                )
                 raise UserNotFoundError(field="id", value=user_id)
 
             # Проверяем, не верифицирован ли уже
@@ -228,11 +229,15 @@ class RegisterService(BaseService):
                 access_token = TokenManager.create_full_token(user_schema)
                 refresh_token = TokenManager.create_refresh_token(user_schema.id)
 
-                await self._save_tokens_to_redis(user_schema, access_token, refresh_token)
+                await self._save_tokens_to_redis(
+                    user_schema, access_token, refresh_token
+                )
 
                 # Обновляем куки если нужно
                 if response and use_cookies:
-                    CookieManager.set_auth_cookies(response, access_token, refresh_token)
+                    CookieManager.set_auth_cookies(
+                        response, access_token, refresh_token
+                    )
 
                 verification_data = VerificationDataSchema(
                     id=user_id,
@@ -240,7 +245,7 @@ class RegisterService(BaseService):
                     verified_at=datetime.now(timezone.utc),
                     access_token=access_token,
                     refresh_token=refresh_token,
-                    token_type=settings.TOKEN_TYPE
+                    token_type=settings.TOKEN_TYPE,
                 )
 
                 return VerificationResponseSchema(
@@ -263,14 +268,17 @@ class RegisterService(BaseService):
 
             # Обновляем куки с полными токенами если нужно
             if response and use_cookies:
-                CookieManager.set_auth_cookies(response, new_access_token, new_refresh_token)
+                CookieManager.set_auth_cookies(
+                    response, new_access_token, new_refresh_token
+                )
                 self.logger.debug("Обновлены куки с полными токенами")
 
             # Отправляем письмо об успешной регистрации
             await self._send_registration_success_email(user)
 
             self.logger.info(
-                "Email верифицирован, выданы полные токены", extra={"user_id": str(user_id)}
+                "Email верифицирован, выданы полные токены",
+                extra={"user_id": str(user_id)},
             )
 
             verification_data = VerificationDataSchema(
@@ -279,7 +287,7 @@ class RegisterService(BaseService):
                 verified_at=datetime.now(timezone.utc),
                 access_token=access_token,
                 refresh_token=refresh_token,
-                token_type=settings.TOKEN_TYPE
+                token_type=settings.TOKEN_TYPE,
             )
 
             return VerificationResponseSchema(
@@ -332,7 +340,9 @@ class RegisterService(BaseService):
             message="Письмо верификации отправлено повторно", data=resend_data
         )
 
-    async def check_verification_status(self, email: str) -> VerificationStatusResponseSchema:
+    async def check_verification_status(
+        self, email: str
+    ) -> VerificationStatusResponseSchema:
         """
         Проверяет статус верификации email пользователя
 
@@ -350,16 +360,15 @@ class RegisterService(BaseService):
             self.logger.error("Пользователь с email '%s' не найден", email)
             raise UserNotFoundError(field="email", value=email)
 
-
         status_data = VerificationStatusDataSchema(
             email=email,
             is_verified=user.is_verified,
-            checked_at=datetime.now(timezone.utc)
+            checked_at=datetime.now(timezone.utc),
         )
 
         return VerificationStatusResponseSchema(
             message="Email подтвержден" if user.is_verified else "Email не подтвержден",
-            data=status_data
+            data=status_data,
         )
 
     def _validate_verification_token(self, token: str) -> int:

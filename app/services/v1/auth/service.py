@@ -4,9 +4,10 @@
 Обеспечивает аутентификацию, создание токенов и управление сессиями.
 """
 
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime, timezone
 from typing import Optional, Union
+
 from fastapi import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
@@ -17,20 +18,16 @@ from app.core.exceptions import (ForbiddenError, InvalidCredentialsError,
                                  UserNotFoundError)
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.integrations.mail import AuthEmailDataManager
+from app.core.security.cookies import CookieManager
 from app.core.security.password import PasswordHasher
 from app.core.security.token import TokenManager
-from app.core.security.cookies import CookieManager
 from app.core.settings import settings
-from app.schemas import (AuthSchema, LogoutResponseSchema,
-                                 PasswordResetConfirmResponseSchema,
-                                 PasswordResetConfirmSchema,
-                                 PasswordResetResponseSchema,
-                                 TokenResponseSchema,
-                                 LogoutDataSchema,
-                                 PasswordResetConfirmDataSchema,
-                                 PasswordResetDataSchema, UserCredentialsSchema,
-                                 #TokenDataSchema
-                                 )
+from app.schemas import (AuthSchema, LogoutDataSchema,  # TokenDataSchema
+                         LogoutResponseSchema, PasswordResetConfirmDataSchema,
+                         PasswordResetConfirmResponseSchema,
+                         PasswordResetConfirmSchema, PasswordResetDataSchema,
+                         PasswordResetResponseSchema, TokenResponseSchema,
+                         UserCredentialsSchema)
 from app.services.v1.base import BaseService
 
 from .data_manager import AuthDataManager
@@ -67,7 +64,7 @@ class AuthService(BaseService):
         self,
         form_data: OAuth2PasswordRequestForm,
         response: Optional[Response] = None,
-        use_cookies: bool = False
+        use_cookies: bool = False,
     ) -> TokenResponseSchema:
         """
         Аутентифицирует пользователя по логину и паролю.
@@ -242,7 +239,7 @@ class AuthService(BaseService):
         self,
         refresh_token: str,
         response: Optional[Response] = None,
-        use_cookies: bool = False
+        use_cookies: bool = False,
     ) -> TokenResponseSchema:
         """
         Обновляет access токен с помощью refresh токена.
@@ -301,7 +298,9 @@ class AuthService(BaseService):
 
             # Опционально обновляем куки
             if response and use_cookies:
-                CookieManager.set_auth_cookies(response, access_token, new_refresh_token)
+                CookieManager.set_auth_cookies(
+                    response, access_token, new_refresh_token
+                )
 
                 return TokenResponseSchema(
                     message="Токен успешно обновлен",
@@ -329,7 +328,7 @@ class AuthService(BaseService):
         self,
         authorization: Optional[str],
         response: Optional[Response] = None,
-        clear_cookies: bool = False
+        clear_cookies: bool = False,
     ) -> LogoutResponseSchema:
         """
         Выполняет выход пользователя из системы.

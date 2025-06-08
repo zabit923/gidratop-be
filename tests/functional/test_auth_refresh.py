@@ -9,7 +9,7 @@ FUNCTIONAL тесты для refresh токенов.
 """
 import pytest
 from httpx import AsyncClient
-from tests.utils import create_test_user_data, assert_response_structure
+from tests.utils.helpers import create_test_user_data, assert_response_structure
 
 
 class TestAuthRefreshAPI:

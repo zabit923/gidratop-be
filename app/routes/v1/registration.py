@@ -12,7 +12,7 @@ Classes:
 
 from typing import Optional
 
-from fastapi import Depends, Response, Query
+from fastapi import Depends, Query, Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,8 +72,7 @@ class RegisterRouter(BaseRouter):
             new_user: RegistrationRequestSchema,
             response: Response,
             use_cookies: bool = Query(
-                False,
-                description="Использовать куки для хранения токенов"
+                False, description="Использовать куки для хранения токенов"
             ),
             session: AsyncSession = Depends(get_db_session),
             redis: Optional[Redis] = Depends(get_redis_client),

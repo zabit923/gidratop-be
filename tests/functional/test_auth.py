@@ -7,7 +7,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.v1.users import UserModel
 from app.core.security.password import PasswordHasher
-from tests.utils import create_test_user_data
+from tests.utils.helpers import create_test_user_data
 
 
 class TestAuthAPI:
