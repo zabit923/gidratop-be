@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Product
@@ -67,3 +68,16 @@ class ProductDataManager(BaseEntityManager[ProductDataSchema]):
         for key, value in product_data_dict.items():
             setattr(product, key, value)
         return await self.update_one(product)
+
+    async def updata_product_images(
+        self, product: Product, image_urls: List[str]
+    ) -> None:
+        try:
+            await self.update_items(product.id, {"images": image_urls})
+        except (ValueError, SQLAlchemyError):
+            self.logger.error(
+                "Не удалось обновить изображения для продукта %s", product.id
+            )
+            raise RuntimeError(
+                f"Не удалось обновить изображения для продукта {product.id}"
+            )

@@ -1,11 +1,12 @@
-from typing import Optional
+from typing import List, Optional
 
-from fastapi import Depends, Form
+from fastapi import Depends, File, UploadFile
 from fastapi.params import Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from app.core.dependencies import get_db_session
+from app.core.integrations.storage import ProductS3DataManager, get_product_s3_manager
 from app.core.security.auth import get_current_user
 from app.models import UserModel
 from app.routes.base import BaseRouter
@@ -108,31 +109,29 @@ class ProductRouter(BaseRouter):
         )
         async def update_product(
             product_id: int,
-            title: Optional[str] = Form(None),
-            description: Optional[str] = Form(None),
-            brand: Optional[str] = Form(None),
-            country: Optional[str] = Form(None),
-            width: Optional[float] = Form(None),
-            height: Optional[float] = Form(None),
-            material: Optional[str] = Form(None),
-            price: Optional[float] = Form(None),
-            quantity: Optional[int] = Form(None),
-            category_id: Optional[int] = Form(None),
+            product_data: ProductUpdateSchema,
             user: UserModel = Depends(get_current_user),
             session: AsyncSession = Depends(get_db_session),
         ) -> ProductResponseSchema:
-            product_data = ProductUpdateSchema(
-                title=title,
-                description=description,
-                brand=brand,
-                country=country,
-                width=width,
-                height=height,
-                material=material,
-                price=price,
-                quantity=quantity,
-                category_id=category_id,
-            )
             return await ProductService(session).update_product(
                 user, product_id, product_data
+            )
+
+        @self.router.put(
+            "/{product_id}",
+            response_model=ProductResponseSchema,
+            status_code=status.HTTP_200_OK,
+            summary="Обновление картинок продукта по ID",
+        )
+        async def update_product_images(
+            product_id: int,
+            images: List[UploadFile] = File(
+                None, description="Список изображений для обновления"
+            ),
+            user: UserModel = Depends(get_current_user),
+            session: AsyncSession = Depends(get_db_session),
+            s3_data_manager: ProductS3DataManager = Depends(get_product_s3_manager),
+        ) -> ProductResponseSchema:
+            return await ProductService(session, s3_data_manager).update_product_images(
+                user, product_id, images
             )

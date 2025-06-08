@@ -47,22 +47,15 @@ class CategoryDataManager(BaseEntityManager[CategoryDataSchema]):
             setattr(category, key, value)
         return await self.update_one(category)
 
-    async def update_image(self, category_id: int, image_url: str) -> None:
-        category = await self.get_item(category_id)
-        if not category:
-            self.logger.error(
-                "Категория с ID %s не найдена при обновлении изображения", category_id
-            )
-            raise ValueError(f"Категория с ID {category_id} не найдена")
+    async def update_image(self, category: Category, image_url: str) -> None:
         try:
-            await self.update_items(category_id, {"image": image_url})
-
+            await self.update_items(category.id, {"image": image_url})
         except (ValueError, SQLAlchemyError):
             self.logger.error(
-                "Не удалось обновить изображение для категории %s", category_id
+                "Не удалось обновить изображение для категории %s", category.id
             )
             raise RuntimeError(
-                f"Не удалось обновить изображение для категории {category_id}"
+                f"Не удалось обновить изображение для категории {category.id}"
             )
 
     async def get_all_categories(

@@ -150,7 +150,7 @@ class CategoryService(BaseService):
             self.logger.error("Неизвестная ошибка при загрузке изображения: %s", str(e))
             raise StorageError(detail=f"Ошибка при загрузке изображения: {str(e)}")
 
-        await self.data_manager.update_image(category.id, image_url)
+        await self.data_manager.update_image(category, image_url)
 
     async def get_all_categories(
         self,

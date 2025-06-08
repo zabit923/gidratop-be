@@ -11,6 +11,7 @@
 # # Импортируем публичные классы и функции для использования в других модулях
 # from .producers import EmailProducer, MessageProducer
 from .categories import CategoryS3DataManager, get_category_s3_manager
+from .products import ProductS3DataManager, get_product_s3_manager
 
 __all__ = [
     # "rabbit_router",
@@ -20,4 +21,6 @@ __all__ = [
     # "email_test_router",
     "CategoryS3DataManager",
     "get_category_s3_manager",
+    "ProductS3DataManager",
+    "get_product_s3_manager",
 ]
