@@ -171,18 +171,18 @@ class AuthService(BaseService):
         if response and use_cookies:
             CookieManager.set_auth_cookies(response, access_token, refresh_token)
 
-        # token_data = TokenDataSchema(
-        #     access_token=access_token,
-        #     refresh_token=refresh_token,
-        #     expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        # )
+            return TokenResponseSchema(
+                message="Аутентификация успешна",
+                access_token=None,
+                refresh_token=None,
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            )
 
         return TokenResponseSchema(
             message="Аутентификация успешна",
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            # data=token_data,
         )
 
     async def create_token(self, user_schema: UserCredentialsSchema) -> str:
@@ -298,22 +298,23 @@ class AuthService(BaseService):
                 "Токены успешно обновлены",
                 extra={"user_id": str(user_id)},
             )
-            # token_data = TokenDataSchema(
-            #     access_token=access_token,
-            #     refresh_token=new_refresh_token,
-            #     expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            # )
 
             # Опционально обновляем куки
             if response and use_cookies:
                 CookieManager.set_auth_cookies(response, access_token, new_refresh_token)
+
+                return TokenResponseSchema(
+                    message="Токен успешно обновлен",
+                    access_token=None,
+                    refresh_token=None,
+                    expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                )
 
             return TokenResponseSchema(
                 message="Токен успешно обновлен",
                 access_token=access_token,
                 refresh_token=new_refresh_token,
                 expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-                # data=token_data
             )
 
         except (TokenExpiredError, TokenInvalidError) as e:

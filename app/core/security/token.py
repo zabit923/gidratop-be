@@ -4,7 +4,7 @@
 Предоставляет класс TokenManager для генерации, проверки и валидации JWT токенов.
 """
 import uuid
-
+import time
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional, Union
@@ -220,6 +220,8 @@ class TokenManager:
             "sub": str(user_id),  # Всегда строка в JWT
             "expires_at": expires_at,
             "type": "refresh",
+            "iat": int(time.time()),
+            "jti": str(uuid.uuid4())
         }
 
     @staticmethod
