@@ -57,36 +57,42 @@ class TestRegisterRouter:
         Моки:
         - RegisterService: возвращает предопределенный ответ
         """
+        # 1. Подготовка тестовых данных
         user_data = create_test_user_data()
 
-        # Мокаем весь сервис регистрации
+        # 2. Мокирование RegisterService
         with patch('app.services.v1.registration.service.RegisterService') as mock_service_class:
+            # Создаем мок экземпляра сервиса
             mock_service = AsyncMock()
             mock_service_class.return_value = mock_service
 
+            # Настраиваем что должен вернуть мок при вызове create_user
             mock_service.create_user.return_value = {
                 "success": True,
-                "message": "Пользователь успешно зарегистрирован",
+                "message": "Регистрация завершена. Подтвердите email для полного доступа.",
                 "data": {
-                    "user": {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "username": user_data["username"],
-                        "email": user_data["email"],
-                        "is_verified": False
-                    },
-                    "tokens": {
-                        "access_token": "test_access_token",
-                        "refresh_token": "test_refresh_token"
-                    }
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "username": user_data["username"],
+                    "email": user_data["email"],
+                    "role": "user",
+                    "is_active": True,
+                    "is_verified": False,
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "referral_code": "REF12345678",
+                    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    "token_type": "bearer",
+                    "requires_verification": True
                 }
             }
-
+            # 3. HTTP запрос к роутеру
             response = await client.post("/api/v1/register", json=user_data)
-
+            # 4. Проверка HTTP ответа
             assert response.status_code == 200
             response_data = response.json()
-
+            # 5. Проверка структуры ответа
             assert_response_structure(response_data, ["success", "message", "data"])
+            # 6. Проверка успешности регистрации
             assert response_data["success"] is True
 
     @pytest.mark.asyncio
@@ -110,26 +116,28 @@ class TestRegisterRouter:
 
             mock_service.create_user.return_value = {
                 "success": True,
-                "message": "Пользователь успешно зарегистрирован",
+                "message": "Регистрация завершена. Подтвердите email для полного доступа.",
                 "data": {
-                    "user": {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "username": user_data["username"],
-                        "email": user_data["email"],
-                        "is_verified": False
-                    },
-                    "tokens": {
-                        "access_token": "test_access_token",
-                        "refresh_token": "test_refresh_token"
-                    }
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "username": user_data["username"],
+                    "email": user_data["email"],
+                    "role": "user",
+                    "is_active": True,
+                    "is_verified": False,
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "referral_code": "REF12345678",
+                    "access_token": None,
+                    "refresh_token": None,
+                    "token_type": "bearer",
+                    "requires_verification": True
                 }
             }
-
+            # HTTP запрос с параметром use_cookies=true
             response = await client.post(
                 "/api/v1/register?use_cookies=true",
                 json=user_data
             )
-
+             # Проверяем что запрос обработан успешно
             assert response.status_code == 200
 
     @pytest.mark.asyncio
@@ -154,6 +162,7 @@ class TestRegisterRouter:
 
         response = await client.post("/api/v1/register", json=invalid_data)
 
+        # Проверяем статус ошибки валидации
         assert response.status_code == 422  # Validation error
 
     @pytest.mark.asyncio
@@ -172,6 +181,12 @@ class TestRegisterRouter:
         response = await client.post("/api/v1/register", json=incomplete_data)
 
         assert response.status_code == 422
+
+        # Проверяем что в ошибках есть информация о недостающих полях
+        error_data = response.json()
+        error_fields = [err["loc"][-1] for err in error_data["detail"]]
+        assert "email" in error_fields
+        assert "password" in error_fields
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -199,6 +214,7 @@ class TestRegisterRouter:
             user_data["password"] = case["password"]
 
             if not case["should_fail"]:
+                # Для валидных паролей мокируем сервис
                 with patch('app.services.v1.registration.service.RegisterService') as mock_service_class:
                     mock_service = AsyncMock()
                     mock_service_class.return_value = mock_service
@@ -212,6 +228,7 @@ class TestRegisterRouter:
                     response = await client.post("/api/v1/register", json=user_data)
                     assert response.status_code == 200
             else:
+                # Для невалидных паролей ожидаем ошибку валидации
                 response = await client.post("/api/v1/register", json=user_data)
                 assert response.status_code in [401, 422]  # Может быть и 401 и 422
 

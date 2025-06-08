@@ -15,15 +15,15 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, Union
+from typing import Optional
 
 from pydantic import EmailStr, Field
 
 from app.models.v1.users import UserRole
-from app.schemas.v1.base import BaseSchema, CommonBaseSchema
+from app.schemas.v1.base import UserBaseSchema, CommonBaseSchema
 
 
-class UserSchema(BaseSchema):
+class UserSchema(UserBaseSchema):
     """
     Полная схема пользователя для внутренних API операций.
 
@@ -145,7 +145,7 @@ class UserSchema(BaseSchema):
     )
 
 
-class UserPublicSchema(BaseSchema):
+class UserPublicSchema(UserBaseSchema):
     """
     Публичная схема пользователя для других пользователей.
 
@@ -158,7 +158,7 @@ class UserPublicSchema(BaseSchema):
         role: Роль пользователя
         is_active: Статус активности
         total_orders: Количество заказов (для репутации)
-        created_at: Дата регистрации (наследуется от BaseSchema)
+        created_at: Дата регистрации (наследуется от UserBaseSchema)
 
     Usage:
         ```python
@@ -205,7 +205,7 @@ class UserPrivateSchema(UserSchema):
     pass  # Наследует все поля от UserSchema
 
 
-class UserProfileSchema(BaseSchema):
+class UserProfileSchema(UserBaseSchema):
     """
     Схема для редактирования профиля пользователя.
 
@@ -307,7 +307,7 @@ class CurrentUserSchema(CommonBaseSchema):
     is_verified: bool = Field(description="Статус верификации")
 
 
-class UserDetailDataSchema(BaseSchema):
+class UserDetailDataSchema(UserBaseSchema):
     """
     Схема детальной информации о пользователе для административных целей.
 
@@ -324,8 +324,8 @@ class UserDetailDataSchema(BaseSchema):
         registration_source: Источник регистрации
         last_login: Время последнего входа
         total_orders: Общее количество заказов
-        created_at: Дата регистрации (наследуется от BaseSchema)
-        updated_at: Дата последнего обновления (наследуется от BaseSchema)
+        created_at: Дата регистрации (наследуется от UserBaseSchema)
+        updated_at: Дата последнего обновления (наследуется от UserBaseSchema)
 
     Usage:
         ```python
@@ -470,7 +470,7 @@ class UserCredentialsSchema(CommonBaseSchema):
     is_verified: bool = Field(default=False, description="Статус верификации")
 
 
-class UserFinancialDataSchema(BaseSchema):
+class UserFinancialDataSchema(UserBaseSchema):
     """
     Схема финансовых данных пользователя.
 
@@ -515,7 +515,7 @@ class UserFinancialDataSchema(BaseSchema):
     )
 
 
-class UserNotificationSettingsSchema(BaseSchema):
+class UserNotificationSettingsSchema(UserBaseSchema):
     """
     Схема настроек уведомлений пользователя.
 
@@ -553,7 +553,7 @@ class UserNotificationSettingsSchema(BaseSchema):
     marketing_consent: bool = Field(default=False, description="Согласие на маркетинг")
 
 
-class UserStatsSchema(BaseSchema):
+class UserStatsSchema(UserBaseSchema):
     """
     Схема статистики пользователя.
 

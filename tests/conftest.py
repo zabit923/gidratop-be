@@ -10,6 +10,7 @@
 - Functional тесты: тестирование полного цикла с реальной БД
 - E2E тесты: тестирование пользовательских сценариев
 """
+import uuid
 from unittest.mock import AsyncMock, patch
 import pytest_asyncio
 import asyncpg
@@ -152,7 +153,7 @@ async def mock_user():
     Возвращает: CurrentUserSchema с тестовыми данными пользователя
     """
     return CurrentUserSchema(
-        id=1,
+        id=uuid.uuid4(),
         username="testuser",
         email="test@example.com",
         role=UserRole.USER,

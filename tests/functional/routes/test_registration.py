@@ -161,15 +161,16 @@ class TestRegistrationAPI:
         response1 = await client.post("/api/v1/register", json=user_data)
         assert response1.status_code == 200
 
-        # Попытка повторной регистрации с тем же email
+        # Попытка повторной регистрации с тем же email, но другим username
         user_data["username"] = "user2"
         response2 = await client.post("/api/v1/register", json=user_data)
 
+        # Проверяем что вторая регистрация отклонена
         assert response2.status_code == 409
         data = response2.json()
         assert data["success"] is False
 
-        # Проверяем текст ошибки в error.detail
+        # Проверяем текст ошибки содержит информацию о дублирующемся email
         error_detail = data["error"]["detail"].lower()
         assert "email" in error_detail
         assert "duplicate@example.com" in error_detail
@@ -192,7 +193,7 @@ class TestRegistrationAPI:
         response1 = await client.post("/api/v1/register", json=user_data)
         assert response1.status_code == 200
 
-        # Попытка повторной регистрации с тем же username
+        # Попытка повторной регистрации с тем же username, но другим email
         user_data["email"] = "user2@example.com"
         response2 = await client.post("/api/v1/register", json=user_data)
 
@@ -253,7 +254,7 @@ class TestRegistrationAPI:
             """
             user_data = {
                 "username": "testuser",
-                "email": "invalid-email",
+                "email": "invalid-email", # Невалидный формат email
                 "password": "SecurePass123!!"
             }
 
@@ -272,7 +273,7 @@ class TestRegistrationAPI:
         user_data = {
             "username": "testuser",
             "email": "test@example.com",
-            "password": "123"
+            "password": "123" # Слишком короткий пароль
         }
 
         response = await client.post("/api/v1/register", json=user_data)
