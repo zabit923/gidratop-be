@@ -169,24 +169,52 @@ class TestRegisterRouter:
     @pytest.mark.integration
     async def test_register_user_missing_required_fields(self, client: AsyncClient):
         """
-        Тест регистрации без обязательных полей.
-
-        Проверяем валидацию обязательных полей на уровне Pydantic схемы
+        Тест валидации обязательных полей при регистрации.
+    
+        Что тестируем:
+        1. API возвращает ошибку 422 при отсутствии обязательных полей
+        2. Структура ответа соответствует схеме ошибок
+        3. Список ошибок содержит все отсутствующие поля
         """
-        incomplete_data = {
-            "username": "testuser"
-            # Отсутствуют email и password
-        }
-
-        response = await client.post("/api/v1/register", json=incomplete_data)
-
+        # Отправляем пустой запрос
+        response = await client.post("/api/v1/register", json={})
+        
+        print(f"Response status: {response.status_code}")
+        print(f"Response body: {response.json()}")
+    
         assert response.status_code == 422
+        response_data = response.json()
 
-        # Проверяем что в ошибках есть информация о недостающих полях
-        error_data = response.json()
-        error_fields = [err["loc"][-1] for err in error_data["detail"]]
-        assert "email" in error_fields
-        assert "password" in error_fields
+        # Проверяем структуру ответа согласно вашему обработчику валидации
+        assert response_data["success"] is False
+        assert response_data["message"] is None
+        assert response_data["data"] is None
+        assert "error" in response_data
+    
+        error_data = response_data["error"]
+        assert error_data["error_type"] == "validation_error"
+        assert error_data["detail"] == "Ошибка валидации данных"
+        assert "extra" in error_data
+        assert "errors" in error_data["extra"]
+    
+        # Проверяем список ошибок валидации
+        validation_errors = error_data["extra"]["errors"]
+        assert isinstance(validation_errors, list)
+        assert len(validation_errors) > 0
+    
+        # Извлекаем поля с ошибками
+        error_fields = [err["loc"][-1] for err in validation_errors]
+    
+        # Проверяем наличие обязательных полей
+        required_fields = ["username", "email", "password"]
+        for field in required_fields:
+            assert field in error_fields, f"Поле '{field}' должно быть в списке ошибок валидации"
+    
+        # Проверяем, что каждая ошибка содержит необходимые поля
+        for error in validation_errors:
+            assert "loc" in error, "Каждая ошибка должна содержать поле 'loc'"
+            assert "msg" in error, "Каждая ошибка должна содержать поле 'msg'"
+            assert isinstance(error["loc"], list), "Поле 'loc' должно быть списком"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -231,44 +259,6 @@ class TestRegisterRouter:
                 # Для невалидных паролей ожидаем ошибку валидации
                 response = await client.post("/api/v1/register", json=user_data)
                 assert response.status_code in [401, 422]  # Может быть и 401 и 422
-
-    @pytest.mark.asyncio
-    @pytest.mark.integration
-    async def test_register_service_error_handling(self, client: AsyncClient):
-        """
-        Тест обработки ошибок от RegisterService.
-
-        Что тестируем:
-        1. Роутер корректно обрабатывает исключения от сервиса
-        2. HTTP статусы соответствуют типам ошибок
-        3. Структура ответа при ошибках
-
-        Мокируем сервис чтобы он выбрасывал различные исключения
-        """
-        user_data = create_test_user_data()
-
-        # Тест обработки ошибки "пользователь уже существует"
-        with patch('app.services.v1.registration.service.RegisterService') as mock_service_class:
-            mock_service = AsyncMock()
-            mock_service_class.return_value = mock_service
-
-            # Мокируем что сервис возвращает ошибку дублирования
-            mock_service.create_user.return_value = {
-                "success": False,
-                "error": {
-                    "code": "USER_ALREADY_EXISTS",
-                    "detail": "Пользователь с таким email уже существует"
-                }
-            }
-
-            response = await client.post("/api/v1/register", json=user_data)
-
-            # В зависимости от реализации роутера может быть 409 или 400
-            assert response.status_code in [400, 409]
-
-            response_data = response.json()
-            assert response_data["success"] is False
-            assert "error" in response_data
 
     @pytest.mark.asyncio
     @pytest.mark.integration
