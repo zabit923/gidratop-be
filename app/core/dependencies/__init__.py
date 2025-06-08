@@ -1,6 +1,6 @@
 from .base import managed_context
-from .database import get_db_session, database_client
 from .cache import get_redis_client
+from .database import database_client, get_db_session
 from .storage import get_s3_client
 
 __all__ = [

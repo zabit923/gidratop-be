@@ -18,12 +18,13 @@ Classes:
 
 from typing import Optional
 
-from fastapi import Depends, Header, Response, Cookie, Query
+from fastapi import Cookie, Depends, Header, Query, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.exceptions import TokenMissingError
+
 from app.core.dependencies import get_db_session, get_redis_client
+from app.core.exceptions import TokenMissingError
 from app.routes.base import BaseRouter
 from app.schemas import (ForgotPasswordSchema,
                          InvalidCredentialsResponseSchema,
@@ -97,7 +98,9 @@ class AuthRouter(BaseRouter):
         async def authenticate(
             response: Response,
             form_data: OAuth2PasswordRequestForm = Depends(),
-            use_cookies: bool = Query(False, description="Использовать куки для хранения токенов"),
+            use_cookies: bool = Query(
+                False, description="Использовать куки для хранения токенов"
+            ),
             session: AsyncSession = Depends(get_db_session),
             redis: Optional[Redis] = Depends(get_redis_client),
         ) -> TokenResponseSchema:
@@ -124,7 +127,9 @@ class AuthRouter(BaseRouter):
             * **token_type**: Тип токена (Bearer)
             * **expires_in**: Время жизни access токена в секундах
             """
-            return await AuthService(session, redis).authenticate(form_data, response, use_cookies)
+            return await AuthService(session, redis).authenticate(
+                form_data, response, use_cookies
+            )
 
         @self.router.post(
             path="/refresh",
@@ -156,7 +161,9 @@ class AuthRouter(BaseRouter):
         )
         async def refresh_token(
             response: Response,
-            use_cookies: bool = Query(False, description="Использовать куки для токенов"),
+            use_cookies: bool = Query(
+                False, description="Использовать куки для токенов"
+            ),
             refresh_token_header: str = Header(None, alias="refresh-token"),
             refresh_token_cookie: str = Cookie(None, alias="refresh_token"),
             session: AsyncSession = Depends(get_db_session),

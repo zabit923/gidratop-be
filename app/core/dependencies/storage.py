@@ -1,9 +1,11 @@
 from typing import AsyncGenerator
+
 from app.core.connections.storage import S3ContextManager
 from app.core.dependencies import managed_context
 
 # Глобальный контекстный менеджер
 _s3_context = S3ContextManager()
+
 
 async def get_s3_client() -> AsyncGenerator:
     """

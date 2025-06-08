@@ -1,8 +1,9 @@
 """Модуль менеджера данных для работы с S3."""
+
 import logging
 import os
 import uuid
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 
 import aiofiles  # type: ignore
 from botocore.exceptions import ClientError  # type: ignore
@@ -15,11 +16,11 @@ class BaseS3Storage:
     """
     Базовый класс для работы с S3.
     """
-    
+
     def __init__(self, s3_client: Any):
         """
         Инициализация базового S3 хранилища.
-        
+
         Args:
             s3_client: Клиент S3 для работы с хранилищем
         """
@@ -31,7 +32,7 @@ class BaseS3Storage:
     async def create_bucket(self, bucket_name: Optional[str] = None) -> None:
         """
         Создание бакета в S3.
-        
+
         Args:
             bucket_name (Optional[str]): имя бакета для создания (по умолчанию из конфигурации)
         """
@@ -44,16 +45,18 @@ class BaseS3Storage:
             self.logger.error(f"Ошибка при создании бакета {bucket_name}: {error}")
             raise ValueError(f"Ошибка при создании бакета: {error}") from error
         except Exception as error:
-            self.logger.error(f"Неожиданная ошибка при создании бакета {bucket_name}: {error}")
+            self.logger.error(
+                f"Неожиданная ошибка при создании бакета {bucket_name}: {error}"
+            )
             raise RuntimeError(f"Ошибка при создании бакета: {error}") from error
 
     async def bucket_exists(self, bucket_name: Optional[str] = None) -> bool:
         """
         Проверка существования бакета.
-        
+
         Args:
             bucket_name (Optional[str]): имя бакета для проверки (по умолчанию из конфигурации)
-            
+
         Returns:
             bool: True если бакет существует, False в противном случае
         """
@@ -74,11 +77,11 @@ class BaseS3Storage:
     ) -> bool:
         """
         Проверка существования файла в S3.
-        
+
         Args:
             file_key (str): ключ файла в S3
             bucket_name (Optional[str]): имя бакета (по умолчанию из конфигурации)
-            
+
         Returns:
             bool: True если файл существует, False в противном случае
         """
@@ -99,12 +102,12 @@ class BaseS3Storage:
     ) -> str:
         """
         Загрузка файла в S3 из файловой системы.
-        
+
         Args:
             file_path (str): путь к файлу для загрузки
             file_key (str): ключ файла в S3
             bucket_name (Optional[str]): имя бакета (по умолчанию из конфигурации)
-            
+
         Returns:
             str: URL загруженного файла в S3
         """
@@ -143,13 +146,13 @@ class BaseS3Storage:
     ) -> str:
         """
         Прямая загрузка файла в S3.
-        
+
         Args:
             file (UploadFile): файл для загрузки
             file_key (str): ключ файла в S3 (путь в бакете)
             file_content (Optional[bytes]): содержимое файла в виде байтового объекта
             bucket_name (Optional[str]): имя бакета (по умолчанию из конфигурации)
-            
+
         Returns:
             str: URL загруженного файла в S3
         """
@@ -171,7 +174,7 @@ class BaseS3Storage:
             file_key = (
                 f"{file_key}/{unique_filename}" if file_key else f"{unique_filename}"
             )
-            
+
             response = await self._client.put_object(
                 Bucket=bucket_name,
                 Key=file_key,
@@ -196,17 +199,21 @@ class BaseS3Storage:
             )
             raise ValueError(f"Ошибка при загрузке файла: {error}") from error
         except Exception as error:
-            self.logger.error(f"Неожиданная ошибка при загрузке файла {file.filename}: {error}")
+            self.logger.error(
+                f"Неожиданная ошибка при загрузке файла {file.filename}: {error}"
+            )
             raise RuntimeError(f"Ошибка при загрузке файла: {error}") from error
 
-    async def get_link_file(self, file_key: str, bucket_name: Optional[str] = None) -> str:
+    async def get_link_file(
+        self, file_key: str, bucket_name: Optional[str] = None
+    ) -> str:
         """
         Получение ссылки на файл в S3.
-        
+
         Args:
             file_key (str): ключ файла в S3
             bucket_name (Optional[str]): имя бакета (по умолчанию из конфигурации)
-            
+
         Returns:
             str: ссылка на файл в S3
         """
@@ -227,14 +234,16 @@ class BaseS3Storage:
             self.logger.error(error_message)
             raise RuntimeError(error_message) from error
 
-    async def delete_file(self, file_key: str, bucket_name: Optional[str] = None) -> bool:
+    async def delete_file(
+        self, file_key: str, bucket_name: Optional[str] = None
+    ) -> bool:
         """
         Удаление файла из бакета.
-        
+
         Args:
             file_key (str): ключ файла для удаления
             bucket_name (Optional[str]): имя бакета (по умолчанию из конфигурации)
-            
+
         Returns:
             bool: True если файл успешно удален
         """
@@ -258,11 +267,11 @@ class BaseS3Storage:
     ) -> List[str]:
         """
         Получение списка файлов в бакете.
-        
+
         Args:
             prefix (str): префикс для фильтрации файлов
             bucket_name (Optional[str]): имя бакета (по умолчанию из конфигурации)
-            
+
         Returns:
             List[str]: список ключей файлов в S3
         """

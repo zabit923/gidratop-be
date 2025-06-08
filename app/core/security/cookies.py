@@ -38,9 +38,7 @@ class CookieManager:
 
     @staticmethod
     def set_auth_cookies(
-        response: Response,
-        access_token: str,
-        refresh_token: str
+        response: Response, access_token: str, refresh_token: str
     ) -> None:
         """
         Устанавливает куки с токенами аутентификации.
@@ -67,7 +65,7 @@ class CookieManager:
             extra={
                 "access_token_length": len(access_token),
                 "refresh_token_length": len(refresh_token),
-            }
+            },
         )
 
     @staticmethod
@@ -172,9 +170,7 @@ class CookieManager:
 
     @staticmethod
     def set_verification_cookie(
-        response: Response,
-        verification_token: str,
-        max_age: Optional[int] = None
+        response: Response, verification_token: str, max_age: Optional[int] = None
     ) -> None:
         """
         Устанавливает куку с токеном верификации email.

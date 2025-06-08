@@ -15,7 +15,7 @@ Classes:
 
 from typing import Optional
 
-from fastapi import Depends, Response, Query
+from fastapi import Depends, Query, Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -86,8 +86,7 @@ class VerificationRouter(BaseRouter):
             token: str,
             response: Response,
             use_cookies: bool = Query(
-                False,
-                description="Обновить куки с полными токенами"
+                False, description="Обновить куки с полными токенами"
             ),
             session: AsyncSession = Depends(get_db_session),
             redis: Optional[Redis] = Depends(get_redis_client),
@@ -111,7 +110,9 @@ class VerificationRouter(BaseRouter):
             4. Отправка письма об успешной регистрации
             5. Опциональное обновление куков
             """
-            return await RegisterService(session, redis).verify_email(token, response, use_cookies)
+            return await RegisterService(session, redis).verify_email(
+                token, response, use_cookies
+            )
 
         @self.router.post(
             path="/resend",
@@ -149,7 +150,6 @@ class VerificationRouter(BaseRouter):
             return await RegisterService(session, redis).resend_verification_email(
                 request.email
             )
-
 
         @self.router.get(
             path="/status/{email}",
@@ -190,4 +190,6 @@ class VerificationRouter(BaseRouter):
             * Отображение статуса в интерфейсе пользователя
             * Валидация для операций, требующих подтвержденный email
             """
-            return await RegisterService(session, redis).check_verification_status(email)
+            return await RegisterService(session, redis).check_verification_status(
+                email
+            )

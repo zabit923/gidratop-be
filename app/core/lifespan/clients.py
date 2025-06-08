@@ -16,7 +16,7 @@ class ClientsManager(BaseClient):
 
     async def connect(self) -> None:
         """Инициализирует и подключает все клиенты"""
-        from app.core.connections import RedisClient, RabbitMQClient
+        from app.core.connections import RabbitMQClient, RedisClient
 
         # Инициализируем клиентов
         self.clients = [RedisClient(), RabbitMQClient()]

@@ -4,12 +4,11 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import (ProfileNotFoundError,
-                                 UserNotFoundError)
+from app.core.exceptions import ProfileNotFoundError, UserNotFoundError
 from app.core.security.password import PasswordHasher
-from app.schemas import (CurrentUserSchema,
-                         PasswordFormSchema, PasswordUpdateResponseSchema,
-                         ProfileResponseSchema, ProfileUpdateSchema)
+from app.schemas import (CurrentUserSchema, PasswordFormSchema,
+                         PasswordUpdateResponseSchema, ProfileResponseSchema,
+                         ProfileUpdateSchema)
 from app.services.v1.base import BaseService
 
 from .data_manager import ProfileDataManager

@@ -3,9 +3,10 @@ from .auth import (AuthenticationError, InvalidCredentialsError,
                    InvalidPasswordError, TokenError, TokenExpiredError,
                    TokenInvalidError, TokenMissingError, WeakPasswordError)
 from .base import BaseAPIException
+from .profile import ProfileNotFoundError
+from .rate_limit import RateLimitExceededError
 from .users import (ForbiddenError, UserCreationError, UserExistsError,
                     UserNotFoundError)
-from .profile import ProfileNotFoundError
 
 __all__ = [
     "BaseAPIException",
@@ -24,4 +25,5 @@ __all__ = [
     "UserCreationError",
     "UserExistsError",
     "ProfileNotFoundError",
+    "RateLimitExceededError",
 ]
