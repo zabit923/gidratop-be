@@ -1,6 +1,10 @@
 from typing import List, Optional, Tuple
 
-from app.core.exceptions import CategoryNotFoundError, ForbiddenError
+from app.core.exceptions import (
+    CategoryNotFoundError,
+    ForbiddenError,
+    ProductNotFoundError,
+)
 from app.models import Product, UserModel
 from app.schemas import PaginationParams, ProductCreateSchema, ProductResponseSchema
 from app.services.v1.base import BaseService
@@ -59,3 +63,48 @@ class ProductService(BaseService):
                     field="id", value=data.category_id, detail="Категория не найдена"
                 )
         return await self.data_manager.add_product(data)
+
+    async def get_product_by_id(self, product_id: int) -> ProductResponseSchema:
+        product = await self.data_manager.get_by_id(product_id)
+        if not product:
+            raise ProductNotFoundError(
+                field="id", value=product_id, detail="Продукт не найден"
+            )
+        return ProductResponseSchema.model_validate(product)
+
+    async def delete_product(self, user: UserModel, product_id: int) -> None:
+        if not user.role.MODERATOR:
+            raise ForbiddenError(
+                detail="Недостаточно прав для удаления продукта",
+                required_role="MODERATOR",
+            )
+        product = await self.data_manager.get_by_id(product_id)
+        if not product:
+            raise ProductNotFoundError(
+                field="id", value=product_id, detail="Продукт не найден"
+            )
+        await self.data_manager.delete_item(product_id)
+
+    async def update_product(
+        self, user: UserModel, product_id: int, data: ProductCreateSchema
+    ) -> ProductResponseSchema:
+        if not user.role.MODERATOR:
+            raise ForbiddenError(
+                detail="Недостаточно прав для обновления продукта",
+                required_role="MODERATOR",
+            )
+        product = await self.data_manager.get_by_id(product_id)
+        if not product:
+            raise ProductNotFoundError(
+                field="id", value=product_id, detail="Продукт не найден"
+            )
+        if data.category_id is not None:
+            category = await self.category_data_manager.get_category_by_id(
+                data.category_id
+            )
+            if not category:
+                raise CategoryNotFoundError(
+                    field="id", value=data.category_id, detail="Категория не найдена"
+                )
+        updated_product = await self.data_manager.update_product(product, data)
+        return ProductResponseSchema.model_validate(updated_product)

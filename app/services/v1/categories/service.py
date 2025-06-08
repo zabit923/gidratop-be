@@ -93,6 +93,16 @@ class CategoryService(BaseService):
             raise CategoryNotFoundError(
                 field="id", value=category_id, detail="Категория не найдена"
             )
+        if data.title:
+            existing_category = await self.data_manager.get_model_by_field(
+                "title", data.title
+            )
+            if existing_category and existing_category.id != category_id:
+                raise CategoryAlreadyExistsError(
+                    field="title",
+                    value=data.title,
+                    detail="Категория с таким названием уже существует",
+                )
         if data.parent_id is not None:
             parent = await self.data_manager.get_model_by_field("id", data.parent_id)
             if not parent:

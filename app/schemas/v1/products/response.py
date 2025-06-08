@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from app.schemas import BaseResponseSchema, BaseSchema
 from app.schemas.v1.categories import CategoryShortResponseSchema
@@ -35,6 +35,7 @@ class ProductResponseSchema(BaseSchema):
     material: Optional[str] = None
     price: float
     quantity: int
+    images: Optional[List[str]] = None
     category: Optional["CategoryShortResponseSchema"] = None
 
 

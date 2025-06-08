@@ -59,3 +59,11 @@ class ProductDataManager(BaseEntityManager[ProductDataSchema]):
             category_id=data.category_id,
         )
         return await self.add_one(product_model)
+
+    async def update_product(
+        self, product: Product, data: ProductCreateSchema
+    ) -> Product:
+        product_data_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        for key, value in product_data_dict.items():
+            setattr(product, key, value)
+        return await self.update_one(product)

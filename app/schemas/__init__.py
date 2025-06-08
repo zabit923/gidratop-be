@@ -48,6 +48,7 @@ from .v1.products import (
     ProductDataSchema,
     ProductListResponseSchema,
     ProductResponseSchema,
+    ProductUpdateSchema,
 )
 from .v1.profile import (
     InvalidCurrentPasswordResponseSchema,
@@ -173,4 +174,5 @@ __all__ = [
     "ProductDataSchema",
     "ProductResponseSchema",
     "ProductListResponseSchema",
+    "ProductUpdateSchema",
 ]

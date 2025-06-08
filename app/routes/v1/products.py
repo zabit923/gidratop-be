@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import Depends
+from fastapi import Depends, Form
 from fastapi.params import Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -15,6 +15,7 @@ from app.schemas import (
     ProductCreateSchema,
     ProductListResponseSchema,
     ProductResponseSchema,
+    ProductUpdateSchema,
 )
 from app.services.v1.products.service import ProductService
 
@@ -43,7 +44,7 @@ class ProductRouter(BaseRouter):
             status_code=status.HTTP_200_OK,
             summary="Получение списка продуктов",
         )
-        async def list_products(
+        async def get_all_products(
             skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
             limit: int = Query(
                 10, ge=1, le=100, description="Количество элементов на странице"
@@ -74,3 +75,64 @@ class ProductRouter(BaseRouter):
                 size=pagination.limit,
             )
             return ProductListResponseSchema(data=page)
+
+        @self.router.get(
+            "/{product_id}",
+            response_model=ProductResponseSchema,
+            status_code=status.HTTP_200_OK,
+            summary="Получение продукта по ID",
+        )
+        async def get_product(
+            product_id: int,
+            session: AsyncSession = Depends(get_db_session),
+        ) -> ProductResponseSchema:
+            return await ProductService(session).get_product_by_id(product_id)
+
+        @self.router.delete(
+            "/{product_id}",
+            status_code=status.HTTP_204_NO_CONTENT,
+            summary="Удаление продукта по ID",
+        )
+        async def delete_product(
+            product_id: int,
+            user: UserModel = Depends(get_current_user),
+            session: AsyncSession = Depends(get_db_session),
+        ) -> None:
+            await ProductService(session).delete_product(user, product_id)
+
+        @self.router.patch(
+            "/{product_id}",
+            response_model=ProductResponseSchema,
+            status_code=status.HTTP_200_OK,
+            summary="Обновление продукта по ID",
+        )
+        async def update_product(
+            product_id: int,
+            title: Optional[str] = Form(None),
+            description: Optional[str] = Form(None),
+            brand: Optional[str] = Form(None),
+            country: Optional[str] = Form(None),
+            width: Optional[float] = Form(None),
+            height: Optional[float] = Form(None),
+            material: Optional[str] = Form(None),
+            price: Optional[float] = Form(None),
+            quantity: Optional[int] = Form(None),
+            category_id: Optional[int] = Form(None),
+            user: UserModel = Depends(get_current_user),
+            session: AsyncSession = Depends(get_db_session),
+        ) -> ProductResponseSchema:
+            product_data = ProductUpdateSchema(
+                title=title,
+                description=description,
+                brand=brand,
+                country=country,
+                width=width,
+                height=height,
+                material=material,
+                price=price,
+                quantity=quantity,
+                category_id=category_id,
+            )
+            return await ProductService(session).update_product(
+                user, product_id, product_data
+            )

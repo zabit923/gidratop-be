@@ -13,6 +13,7 @@ from .auth import (
 from .base import BaseAPIException
 from .categories import CategoryAlreadyExistsError, CategoryNotFoundError
 from .common import InvalidFileTypeError, StorageError
+from .products import ProductNotFoundError
 from .profile import ProfileNotFoundError
 from .users import ForbiddenError, UserCreationError, UserExistsError, UserNotFoundError
 
@@ -37,4 +38,5 @@ __all__ = [
     "ProfileNotFoundError",
     "InvalidFileTypeError",
     "StorageError",
+    "ProductNotFoundError",
 ]
