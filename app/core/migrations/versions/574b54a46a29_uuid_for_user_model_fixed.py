@@ -153,4 +153,3 @@ def downgrade() -> None:
     op.drop_table("user_addresses")
     op.drop_table("payment_methods")
     op.drop_table("users")
-    # Не удаляем enum типы, так как они могут использоваться в других местах
