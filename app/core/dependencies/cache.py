@@ -1,10 +1,13 @@
 from typing import AsyncGenerator
+
 from redis import Redis
+
 from app.core.connections import RedisContextManager
 from app.core.dependencies import managed_context
 
 # Глобальный контекстный менеджер
 _redis_context = RedisContextManager()
+
 
 async def get_redis_client() -> AsyncGenerator[Redis, None]:
     """

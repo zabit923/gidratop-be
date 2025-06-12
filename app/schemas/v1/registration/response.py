@@ -29,7 +29,7 @@ class RegistrationResponseSchema(BaseResponseSchema):
             "success": true,
             "message": "Регистрация завершена. Подтвердите email для полного доступа.",
             "data": {
-                "user_id": 123,
+                "id": "550e8400-e29b-41d4-a716-446655440000",
                 "username": "john_doe",
                 "email": "john@example.com",
                 "role": "user",
@@ -45,6 +45,7 @@ class RegistrationResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: RegistrationDataSchema
 
 
@@ -66,7 +67,7 @@ class VerificationResponseSchema(BaseResponseSchema):
             "success": true,
             "message": "Email успешно подтвержден. Теперь вы можете войти в систему",
             "data": {
-                "user_id": 123,
+                "id": "550e8400-e29b-41d4-a716-446655440000",
                 "email": "john@example.com",
                 "verified_at": "2024-01-15T10:35:00Z",
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -76,6 +77,7 @@ class VerificationResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: VerificationDataSchema
 
 
@@ -104,6 +106,7 @@ class ResendVerificationResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: ResendVerificationDataSchema
 
 
@@ -132,4 +135,5 @@ class VerificationStatusResponseSchema(BaseResponseSchema):
         }
         ```
     """
+
     data: VerificationStatusDataSchema

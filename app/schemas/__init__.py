@@ -164,6 +164,7 @@ __all__ = [
     "ProfileNotFoundResponseSchema",
     "UserNotFoundResponseSchema",
     "InvalidCurrentPasswordResponseSchema",
+    "InvalidCurrentPasswordResponseSchema",
     # Categories
     "CategoryDataSchema",
     "CategoryListResponseSchema",

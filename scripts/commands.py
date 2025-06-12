@@ -35,6 +35,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import asyncpg
 import uvicorn
 
 from app.core.dependencies import database_client, get_db_session
@@ -74,7 +75,8 @@ class DockerContainerConflictError(Exception):
         super().__init__(self.message)
 
 
-ENV_FILE = ".env.dev"
+TEST_ENV_FILE = ".env.test"
+DEV_ENV_FILE = ".env.dev"
 # Получаем путь к корню проекта
 ROOT_DIR = Path(__file__).parents[1]
 
@@ -94,15 +96,25 @@ DEFAULT_PORTS = {
 def load_env_vars(env_file_path: str = None) -> dict:
     """
     Загружает переменные окружения из .env файла
-
     Args:
-        env_file_path: Путь к файлу .env. Если None, используется ENV_FILE из констант
-
+        env_file_path: Путь к файлу .env. Если None, используется тестовый файл
     Returns:
         dict: Словарь с переменными окружения
     """
     if env_file_path is None:
-        env_file_path = os.path.join(ROOT_DIR, ENV_FILE)
+        # Для тестов используем .env.test, если есть, иначе .env.dev
+        dev_env_path = ROOT_DIR / DEV_ENV_FILE
+        test_env_path = ROOT_DIR / TEST_ENV_FILE
+
+        if dev_env_path.exists():
+            env_file_path = str(dev_env_path)
+            print(f"📋 Используем dev конфигурацию: {DEV_ENV_FILE}")
+        elif test_env_path.exists():
+            env_file_path = str(test_env_path)
+            print(f"📋 Используем тестовую конфигурацию: {TEST_ENV_FILE}")
+        else:
+            print("❌ Не найден файл конфигурации (.env.dev или .env.test)")
+            return {}
 
     env_vars = {}
     if os.path.exists(env_file_path):
@@ -111,10 +123,15 @@ def load_env_vars(env_file_path: str = None) -> dict:
                 if line.strip() and not line.startswith("#"):
                     try:
                         key, value = line.strip().split("=", 1)
+                        # Убираем кавычки если есть
+                        value = value.strip("\"'")
                         env_vars[key] = value
                     except ValueError:
                         # Пропускаем некорректные строки
                         pass
+    else:
+        print(f"❌ Файл конфигурации не найден: {env_file_path}")
+
     return env_vars
 
 
@@ -129,7 +146,7 @@ def run_compose_command(
     Args:
         command: Команда для docker-compose
         compose_file: Путь к docker-compose файлу. По умолчанию используется COMPOSE_FILE_WITHOUT_BACKEND из констант
-        env: Переменные окружения для docker-compose. По умолчанию используется ENV_FILE из констант
+        env: Переменные окружения для docker-compose. По умолчанию используется DEV_ENV_FILE из констант
 
     Returns:
         None
@@ -149,17 +166,17 @@ def run_compose_command(
         raise FileNotFoundError(f"❌ Файл {compose_file} не найден в {ROOT_DIR}")
 
     # Проверяем наличие .env.dev
-    env_path = os.path.join(ROOT_DIR, ENV_FILE)
+    env_path = os.path.join(ROOT_DIR, DEV_ENV_FILE)
     if not os.path.exists(env_path):
-        print(f"❌ Файл {ENV_FILE} не найден в директории {ROOT_DIR}")
+        print(f"❌ Файл {DEV_ENV_FILE} не найден в директории {ROOT_DIR}")
         print("💡 Создайте файл .env.dev с необходимыми переменными окружения")
         raise FileNotFoundError(
-            f"❌ Файл {ENV_FILE} не найден. Создайте его перед запуском."
+            f"❌ Файл {DEV_ENV_FILE} не найден. Создайте его перед запуском."
         )
 
     # Обновляем переменные окружения
     environment = os.environ.copy()
-    # Добавляем переменные из ENV_FILE
+    # Добавляем переменные из DEV_ENV_FILE
     environment.update(load_env_vars())
     if env:
         environment.update(env)
@@ -997,23 +1014,199 @@ def lint():
     check()
 
 
-def test():
+def test(
+    path: str = "tests/",
+    marker: str = None,
+    verbose: bool = True,
+    output_file: str = None,
+):
     """
-    Запуск тестов через pytest с тестовым окружением.
+    Запуск тестов с фильтрацией.
 
-    Устанавливает ENV_FILE=".env.test" для использования
-    тестовой конфигурации и запускает pytest с verbose выводом.
-
-    Note:
-        Подавляет CalledProcessError для корректного завершения
-        даже при падающих тестах
+    Args:
+        path: Путь к тестам или конкретному файлу
+        marker: Маркер для фильтрации (@pytest.mark.unit и т.д.)
+        verbose: Подробный вывод
+        output_file: Файл для сохранения результатов
     """
+    print("🧪 Подготовка тестового окружения...")
+
+    if not create_test_database():
+        print("❌ Не удалось создать тестовую базу данных")
+        return
+
     env = os.environ.copy()
-    env["ENV_FILE"] = ".env.test"
+    env["DEV_ENV_FILE"] = ".env.test"
+
+    cmd = ["pytest", path]
+
+    if verbose:
+        cmd.append("-v")
+
+    if marker:
+        cmd.extend(["-m", marker])
+
+    cmd.append("--tb=short")  # Короткий traceback
+
+    print(f"🚀 Запуск тестов: {' '.join(cmd)}")
+
     try:
-        subprocess.run(["pytest", "tests/", "-v"], env=env, check=True)
+        if output_file:
+            with open(output_file, "w") as f:
+                subprocess.run(
+                    cmd, env=env, stdout=f, stderr=subprocess.STDOUT, check=True
+                )
+        else:
+            subprocess.run(cmd, env=env, check=True)
     except subprocess.CalledProcessError:
         pass
+
+
+# def create_test_database():
+#     """
+#     Создает тестовую базу данных для pytest.
+
+#     Использует настройки из .env.dev, но создает базу с суффиксом _test.
+#     Поддерживает как Docker, так и прямое подключение к PostgreSQL.
+
+#     Returns:
+#         bool: True при успехе, False при ошибке
+#     """
+#     print("🛠️ Создаю тестовую базу данных...")
+
+#     # Получаем данные из переменных окружения
+#     db_config = load_env_vars()
+
+#     # Получаем имя контейнера PostgreSQL динамически
+#     postgres_container = get_postgres_container_name()
+#     print(f"🔍 Используем PostgreSQL: {postgres_container}")
+
+#     # Извлекаем настройки БД
+#     user = db_config.get('POSTGRES_USER', 'postgres')
+#     password = db_config.get('POSTGRES_PASSWORD', '')
+#     host = db_config.get('POSTGRES_HOST', 'localhost')
+#     port = db_config.get('POSTGRES_PORT', '5432')
+#     db_name = db_config.get('POSTGRES_DB', 'gidrator_db')
+#     test_db_name = f"{db_name}_test"
+
+#     try:
+#         # Проверяем, доступен ли Docker
+#         which_docker = subprocess.run(["which", "docker"], capture_output=True)
+#         docker_available = which_docker.returncode == 0
+
+#         if docker_available and postgres_container != "postgres":
+#             # Метод с использованием Docker
+#             print(f"🐳 Создаю тестовую БД через Docker контейнер: {postgres_container}")
+
+#             # Удаляем существующую тестовую БД если есть
+#             subprocess.run(
+#                 ["docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
+#                 f"DROP DATABASE IF EXISTS {test_db_name};"],
+#                 capture_output=True, text=True
+#             )
+
+#             # Создаем тестовую БД
+#             create_cmd = [
+#                 "docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
+#                 f"CREATE DATABASE {test_db_name};"
+#             ]
+#             result = subprocess.run(create_cmd, capture_output=True, text=True)
+
+#             if result.returncode == 0:
+#                 print(f"✅ Тестовая база данных {test_db_name} создана в контейнере!")
+#             else:
+#                 print(f"❌ Ошибка создания БД в контейнере: {result.stderr}")
+#                 return False
+#         else:
+#             # Прямое подключение через psql
+#             print(f"🔄 Создаю тестовую БД напрямую через psql...")
+
+#             # Формируем команду для работы с БД
+#             psql_command = f"psql -U {user} -h {host} -p {port}"
+#             if password:
+#                 env = os.environ.copy()
+#                 env["PGPASSWORD"] = password
+#             else:
+#                 env = os.environ.copy()
+
+#             # Удаляем существующую тестовую БД если есть
+#             drop_cmd = f"{psql_command} -c \"DROP DATABASE IF EXISTS {test_db_name};\""
+#             subprocess.run(drop_cmd, shell=True, env=env, capture_output=True)
+
+#             # Создаем тестовую БД
+#             create_cmd = f"{psql_command} -c \"CREATE DATABASE {test_db_name};\""
+#             result = subprocess.run(create_cmd, shell=True, env=env, capture_output=True, text=True)
+
+#             if result.returncode == 0:
+#                 print(f"✅ Тестовая база данных {test_db_name} создана!")
+#             else:
+#                 print(f"❌ Ошибка создания тестовой БД: {result.stderr}")
+#                 return False
+
+#         # Выводим информацию о подключении
+#         test_dsn = f"postgresql://{user}:*******@{host}:{port}/{test_db_name}"
+#         print(f"🔄 Тестовая БД доступна: {test_dsn}")
+
+#         return True
+#     except Exception as e:
+#         print(f"❌ Ошибка при создании тестовой базы данных: {e}")
+#         return False
+
+
+async def create_test_database_async():
+    """
+    Создает тестовую базу данных используя asyncpg (без psql).
+    """
+    print("🛠️ Создаю тестовую базу данных...")
+
+    db_config = load_env_vars()
+
+    if not db_config:
+        print("❌ Не удалось загрузить конфигурацию БД")
+        return False
+
+    user = db_config.get("POSTGRES_USER", "postgres")
+    password = db_config.get("POSTGRES_PASSWORD", "")
+    host = db_config.get("POSTGRES_HOST", "localhost")
+    port = int(db_config.get("POSTGRES_PORT", "5432"))
+    db_name = db_config.get("POSTGRES_DB", "gidrator_db")
+    test_db_name = f"{db_name}_test"
+
+    print(f"🔍 Подключение к {host}:{port} как {user}")
+
+    try:
+        # Подключаемся к postgres БД для создания тестовой БД
+        conn = await asyncpg.connect(
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            database="postgres",  # Подключаемся к системной БД
+        )
+
+        # Удаляем существующую тестовую БД если есть
+        await conn.execute(f'DROP DATABASE IF EXISTS "{test_db_name}"')
+        print(f"🗑️ Удалена существующая БД {test_db_name} (если была)")
+
+        # Создаем тестовую БД
+        await conn.execute(f'CREATE DATABASE "{test_db_name}"')
+        print(f"✅ Тестовая база данных {test_db_name} создана!")
+
+        await conn.close()
+
+        # Выводим информацию о подключении
+        test_dsn = f"postgresql://{user}:*******@{host}:{port}/{test_db_name}"
+        print(f"🔄 Тестовая БД доступна: {test_dsn}")
+        return True
+
+    except Exception as e:
+        print(f"❌ Ошибка при создании тестовой базы данных: {e}")
+        return False
+
+
+def create_test_database():
+    """Синхронная обертка для асинхронной функции"""
+    return asyncio.run(create_test_database_async())
 
 
 def start_all():

@@ -1,6 +1,8 @@
+import uuid
 from typing import TYPE_CHECKING, List
 
 from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy.dialects.postgresql.base import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import BaseModel
@@ -17,8 +19,8 @@ class Cart(BaseModel):
 
     __tablename__ = "carts"
 
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
 
     user: Mapped["UserModel"] = relationship(

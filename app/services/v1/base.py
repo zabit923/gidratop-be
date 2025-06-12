@@ -79,7 +79,7 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Example:
             # Создание новой модели и добавление её в БД
-            new_user = User(username="john_doe", email="john@example.com")
+            new_user = UserModel(username="john_doe", email="john@example.com")
             user_model = await data_manager.add_one(new_user)
         """
         try:
@@ -107,11 +107,11 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Usage:
             # Получение пользователя по ID
-            statement = select(User).where(User.id == user_id)
+            statement = select(UserModel).where(UserModel.id == user_id)
             user = await data_manager.get_one(statement)
 
             # Получение первого активного пользователя
-            statement = select(User).where(User.is_active == True).limit(1)
+            statement = select(UserModel).where(UserModel.is_active == True).limit(1)
             active_user = await data_manager.get_one(statement)
         """
         try:
@@ -138,11 +138,11 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Usage:
             # Получение всех пользователей
-            statement = select(User)
+            statement = select(UserModel)
             users = await data_manager.get_all(statement)
 
             # Получение всех активных пользователей, отсортированных по имени
-            statement = select(User).where(User.is_active == True).order_by(User.username)
+            statement = select(UserModel).where(UserModel.is_active == True).order_by(UserModel.username)
             active_users = await data_manager.get_all(statement)
         """
         try:
@@ -168,7 +168,7 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Usage:
             # Получение и обновление пользователя
-            statement = select(User).where(User.id == user_id)
+            statement = select(UserModel).where(UserModel.id == user_id)
             found_user = await data_manager.get_one(statement)
 
             # Простое обновление атрибутов
@@ -212,7 +212,7 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Usage:
             # Получение пользователя
-            statement = select(User).where(User.id == user_id)
+            statement = select(UserModel).where(UserModel.id == user_id)
             user = await data_manager.get_one(statement)
 
             # Обновление нескольких полей
@@ -252,11 +252,11 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Usage:
             # Удаление пользователя по ID
-            statement = delete(User).where(User.id == user_id)
+            statement = delete(UserModel).where(UserModel.id == user_id)
             success = await data_manager.delete_one(statement)
 
             # Удаление всех неактивных пользователей
-            statement = delete(User).where(User.is_active == False)
+            statement = delete(UserModel).where(UserModel.is_active == False)
             success = await data_manager.delete_one(statement)
         """
         try:
@@ -283,11 +283,11 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Usage:
             # Проверка существования пользователя с определенным email
-            statement = select(User).where(User.email == "test@example.com")
+            statement = select(UserModel).where(UserModel.email == "test@example.com")
             exists = await data_manager.exists(statement)
 
             # Проверка существования активных администраторов
-            statement = select(User).where(and_(User.is_active == True, User.role == "admin"))
+            statement = select(UserModel).where(and_(UserModel.is_active == True, UserModel.role == "admin"))
             has_active_admins = await data_manager.exists(statement)
 
             # Проверка существования заказа с определенным номером
@@ -317,7 +317,7 @@ class BaseDataManager(SessionMixin, Generic[T]):
             total_users = await data_manager.count()
 
             # Подсчет активных пользователей
-            statement = select(User).where(User.is_active == True)
+            statement = select(UserModel).where(UserModel.is_active == True)
             active_users_count = await data_manager.count(statement)
         """
         try:
@@ -347,9 +347,9 @@ class BaseDataManager(SessionMixin, Generic[T]):
         Example:
             # Создание нескольких пользователей
             users = [
-                User(username="user1", email="user1@example.com"),
-                User(username="user2", email="user2@example.com"),
-                User(username="user3", email="user3@example.com")
+                UserModel(username="user1", email="user1@example.com"),
+                UserModel(username="user2", email="user2@example.com"),
+                UserModel(username="user3", email="user3@example.com")
             ]
             created_users = await data_manager.bulk_create(users)
         """
@@ -382,7 +382,7 @@ class BaseDataManager(SessionMixin, Generic[T]):
 
         Example:
             # Получение всех неактивных пользователей
-            statement = select(User).where(User.is_active == False)
+            statement = select(UserModel).where(UserModel.is_active == False)
             inactive_users = await data_manager.get_all(statement)
 
             # Активация всех неактивных пользователей
@@ -478,7 +478,7 @@ class BaseDataManager(SessionMixin, Generic[T]):
         Example:
             # Обновление или создание настроек пользователя
             settings, created = await data_manager.update_or_create(
-                {"user_id": user_id},
+                {"user_id": str(user_id)},
                 {"theme": "dark", "notifications_enabled": True}
             )
 
@@ -677,7 +677,7 @@ class BaseEntityManager(BaseDataManager[T]):
 
         Example:
             # Создание новой модели и добавление её в БД
-            new_user = User(username="john_doe", email="john@example.com")
+            new_user = UserModel(username="john_doe", email="john@example.com")
             user_schema = await data_manager.add_item(new_user)
         """
         model_instance = await self.add_one(model)
@@ -992,9 +992,9 @@ class BaseEntityManager(BaseDataManager[T]):
         Example:
             # Создание нескольких пользователей
             users = [
-                User(username="user1", email="user1@example.com"),
-                User(username="user2", email="user2@example.com"),
-                User(username="user3", email="user3@example.com")
+                UserModel(username="user1", email="user1@example.com"),
+                UserModel(username="user2", email="user2@example.com"),
+                UserModel(username="user3", email="user3@example.com")
             ]
             created_user_schemas = await data_manager.bulk_create_items(users)
         """

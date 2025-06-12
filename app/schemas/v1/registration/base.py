@@ -5,7 +5,9 @@
 Эти схемы описывают структуру полезной нагрузки ответов регистрации.
 """
 
+import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import EmailStr, Field
 
@@ -21,7 +23,7 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
     данные такие как хешированный пароль.
 
     Attributes:
-        user_id: Уникальный идентификатор пользователя в системе
+        id: Уникальный UUID идентификатор пользователя в системе
         username: Имя пользователя для входа в систему
         email: Email адрес пользователя
         role: Роль пользователя в системе (по умолчанию "user")
@@ -37,7 +39,7 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
     Example:
         ```python
         {
-            "user_id": 123,
+            "id": "550e8400-e29b-41d4-a716-446655440000",
             "username": "john_doe",
             "email": "john@example.com",
             "role": "user",
@@ -53,8 +55,13 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
         ```
     """
 
-    user_id: int = Field(
-        description="Уникальный идентификатор пользователя", examples=[123, 456, 789]
+    id: uuid.UUID = Field(
+        description="Уникальный UUID идентификатор пользователя",
+        examples=[
+            "550e8400-e29b-41d4-a716-446655440000",
+            "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+            "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        ],
     )
 
     username: str = Field(
@@ -91,14 +98,18 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
         examples=["REF123ABC", "INVITE456", None],
     )
 
-    access_token: str = Field(
-        description="Ограниченный JWT токен доступа (до верификации email)",
-        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."],
+    access_token: Optional[str] = Field(
+        default=None,
+        description="Ограниченный JWT токен доступа (до верификации email). "
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None],
     )
 
-    refresh_token: str = Field(
-        description="JWT токен для обновления access токена",
-        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."],
+    refresh_token: Optional[str] = Field(
+        default=None,
+        description="JWT токен для обновления access токена. "
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...", None],
     )
 
     token_type: str = Field(default="bearer", description="Тип токена (всегда bearer)")
@@ -116,7 +127,7 @@ class VerificationDataSchema(BaseCommonResponseSchema):
     и новые полные токены доступа после верификации.
 
     Attributes:
-        user_id: ID верифицированного пользователя
+        id: UUID верифицированного пользователя
         email: Верифицированный email адрес
         verified_at: Время подтверждения email в UTC
         access_token: Новый полный JWT токен доступа (без ограничений)
@@ -126,7 +137,7 @@ class VerificationDataSchema(BaseCommonResponseSchema):
     Example:
         ```json
         {
-            "user_id": 123,
+            "id": "550e8400-e29b-41d4-a716-446655440000",
             "email": "john@example.com",
             "verified_at": "2024-01-15T10:35:00Z",
             "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -136,8 +147,9 @@ class VerificationDataSchema(BaseCommonResponseSchema):
         ```
     """
 
-    user_id: int = Field(
-        description="Идентификатор верифицированного пользователя", example=123
+    id: uuid.UUID = Field(
+        description="UUID верифицированного пользователя",
+        example="550e8400-e29b-41d4-a716-446655440000",
     )
     email: EmailStr = Field(
         description="Верифицированный email адрес", example="john@example.com"
@@ -146,13 +158,17 @@ class VerificationDataSchema(BaseCommonResponseSchema):
         description="Время подтверждения email в формате UTC",
         example="2024-01-15T10:35:00Z",
     )
-    access_token: str = Field(
-        description="Новый полный JWT токен доступа (без ограничений)",
-        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."],
+    access_token: Optional[str] = Field(
+        default=None,
+        description="Новый полный JWT токен доступа (без ограничений). "
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None],
     )
-    refresh_token: str = Field(
-        description="Новый JWT токен для обновления access токена",
-        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."],
+    refresh_token: Optional[str] = Field(
+        default=None,
+        description="Новый JWT токен для обновления access токена. "
+        "Будет None если используются cookies (use_cookies=true)",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", None],
     )
     token_type: str = Field(default="bearer", description="Тип токена (всегда bearer)")
 

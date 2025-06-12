@@ -19,6 +19,7 @@ from app.core.logging import setup_logging
 from app.core.middlewares.activity import ActivityMiddleware
 from app.core.middlewares.auth_cookie import AuthCookieMiddleware
 from app.core.middlewares.logging import LoggingMiddleware
+from app.core.middlewares.rate_limit import RateLimitMiddleware
 from app.core.settings import settings
 from app.routes.main import MainRouter
 from app.routes.v1 import APIv1
@@ -37,6 +38,7 @@ def create_application() -> FastAPI:
     app.add_middleware(AuthCookieMiddleware)
     app.add_middleware(ActivityMiddleware)
     app.add_middleware(LoggingMiddleware)
+    app.add_middleware(RateLimitMiddleware, **settings.rate_limit_params)
     app.add_middleware(SessionMiddleware, secret_key=settings.TOKEN_SECRET_KEY)
 
     app.add_middleware(CORSMiddleware, **settings.cors_params)

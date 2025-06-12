@@ -4,8 +4,10 @@
 Обеспечивает аутентификацию, создание токенов и управление сессиями.
 """
 
+import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Union
+
 from fastapi import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from redis import Redis
@@ -16,20 +18,16 @@ from app.core.exceptions import (ForbiddenError, InvalidCredentialsError,
                                  UserNotFoundError)
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.integrations.mail import AuthEmailDataManager
+from app.core.security.cookies import CookieManager
 from app.core.security.password import PasswordHasher
 from app.core.security.token import TokenManager
-from app.core.security.cookies import CookieManager
 from app.core.settings import settings
-from app.schemas import (AuthSchema, LogoutResponseSchema,
-                                 PasswordResetConfirmResponseSchema,
-                                 PasswordResetConfirmSchema,
-                                 PasswordResetResponseSchema,
-                                 TokenResponseSchema,
-                                 LogoutDataSchema,
-                                 PasswordResetConfirmDataSchema,
-                                 PasswordResetDataSchema, UserCredentialsSchema,
-                                 #TokenDataSchema
-                                 )
+from app.schemas import (AuthSchema, LogoutDataSchema,  # TokenDataSchema
+                         LogoutResponseSchema, PasswordResetConfirmDataSchema,
+                         PasswordResetConfirmResponseSchema,
+                         PasswordResetConfirmSchema, PasswordResetDataSchema,
+                         PasswordResetResponseSchema, TokenResponseSchema,
+                         UserCredentialsSchema)
 from app.services.v1.base import BaseService
 
 from .data_manager import AuthDataManager
@@ -66,7 +64,7 @@ class AuthService(BaseService):
         self,
         form_data: OAuth2PasswordRequestForm,
         response: Optional[Response] = None,
-        use_cookies: bool = False
+        use_cookies: bool = False,
     ) -> TokenResponseSchema:
         """
         Аутентифицирует пользователя по логину и паролю.
@@ -170,18 +168,18 @@ class AuthService(BaseService):
         if response and use_cookies:
             CookieManager.set_auth_cookies(response, access_token, refresh_token)
 
-        # token_data = TokenDataSchema(
-        #     access_token=access_token,
-        #     refresh_token=refresh_token,
-        #     expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        # )
+            return TokenResponseSchema(
+                message="Аутентификация успешна",
+                access_token=None,
+                refresh_token=None,
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            )
 
         return TokenResponseSchema(
             message="Аутентификация успешна",
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            # data=token_data,
         )
 
     async def create_token(self, user_schema: UserCredentialsSchema) -> str:
@@ -211,7 +209,7 @@ class AuthService(BaseService):
 
         return access_token
 
-    async def create_refresh_token(self, user_id: int) -> str:
+    async def create_refresh_token(self, user_id: Union[int, uuid.UUID]) -> str:
         """
         Создание JWT refresh токена.
 
@@ -232,7 +230,7 @@ class AuthService(BaseService):
 
         self.logger.info(
             "Refresh токен создан и сохранен в Redis",
-            extra={"user_id": user_id, "refresh_token_length": len(refresh_token)},
+            extra={"user_id": str(user_id), "refresh_token_length": len(refresh_token)},
         )
 
         return refresh_token
@@ -241,7 +239,7 @@ class AuthService(BaseService):
         self,
         refresh_token: str,
         response: Optional[Response] = None,
-        use_cookies: bool = False
+        use_cookies: bool = False,
     ) -> TokenResponseSchema:
         """
         Обновляет access токен с помощью refresh токена.
@@ -270,7 +268,7 @@ class AuthService(BaseService):
             ):
                 self.logger.warning(
                     "Попытка использовать неизвестный refresh токен",
-                    extra={"user_id": user_id},
+                    extra={"user_id": str(user_id)},
                 )
                 raise TokenInvalidError()
 
@@ -280,7 +278,7 @@ class AuthService(BaseService):
             if not user_model:
                 self.logger.warning(
                     "Пользователь не найден при обновлении токена",
-                    extra={"user_id": user_id},
+                    extra={"user_id": str(user_id)},
                 )
                 raise UserNotFoundError(field="id", value=user_id)
 
@@ -295,24 +293,27 @@ class AuthService(BaseService):
 
             self.logger.info(
                 "Токены успешно обновлены",
-                extra={"user_id": user_id},
+                extra={"user_id": str(user_id)},
             )
-            # token_data = TokenDataSchema(
-            #     access_token=access_token,
-            #     refresh_token=new_refresh_token,
-            #     expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            # )
 
             # Опционально обновляем куки
             if response and use_cookies:
-                CookieManager.set_auth_cookies(response, access_token, new_refresh_token)
+                CookieManager.set_auth_cookies(
+                    response, access_token, new_refresh_token
+                )
+
+                return TokenResponseSchema(
+                    message="Токен успешно обновлен",
+                    access_token=None,
+                    refresh_token=None,
+                    expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                )
 
             return TokenResponseSchema(
                 message="Токен успешно обновлен",
                 access_token=access_token,
                 refresh_token=new_refresh_token,
                 expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-                # data=token_data
             )
 
         except (TokenExpiredError, TokenInvalidError) as e:
@@ -327,7 +328,7 @@ class AuthService(BaseService):
         self,
         authorization: Optional[str],
         response: Optional[Response] = None,
-        clear_cookies: bool = False
+        clear_cookies: bool = False,
     ) -> LogoutResponseSchema:
         """
         Выполняет выход пользователя из системы.
@@ -347,9 +348,10 @@ class AuthService(BaseService):
                 payload = TokenManager.decode_token(token)
 
                 # Получаем user_id пользователя
-                user_id = payload.get("user_id")
+                user_id_str = payload.get("user_id")
 
-                if user_id:
+                if user_id_str:
+                    user_id = uuid.UUID(user_id_str)
                     await self.redis_data_manager.set_online_status(user_id, False)
 
                     # Удаляем все refresh токены пользователя
@@ -357,7 +359,7 @@ class AuthService(BaseService):
 
                     self.logger.debug(
                         "Пользователь вышел из системы, все токены удалены",
-                        extra={"user_id": user_id, "is_online": False},
+                        extra={"user_id": str(user_id), "is_online": False},
                     )
 
                     # Последнюю активность сохраняем в момент выхода
@@ -481,7 +483,7 @@ class AuthService(BaseService):
             user = await self.data_manager.get_item_by_field("id", user_id)
             if not user:
                 self.logger.warning(
-                    "Пользователь не найден", extra={"user_id": user_id}
+                    "Пользователь не найден", extra={"user_id": str(user_id)}
                 )
                 raise UserNotFoundError(field="id", value=user_id)
 
@@ -493,7 +495,7 @@ class AuthService(BaseService):
                 user_id, {"hashed_password": hashed_password}
             )
 
-            self.logger.info("Пароль успешно изменен", extra={"user_id": user_id})
+            self.logger.info("Пароль успешно изменен", extra={"user_id": str(user_id)})
 
             confirm_data = PasswordResetConfirmDataSchema(
                 password_changed_at=datetime.now(timezone.utc)

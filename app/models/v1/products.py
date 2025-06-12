@@ -55,6 +55,3 @@ class Product(BaseModel):
     items: Mapped[Optional["CartItem"]] = relationship(
         "CartItem", back_populates="product"
     )
-
-
-# TODO расширить характеристики продукта

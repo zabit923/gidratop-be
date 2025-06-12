@@ -1,9 +1,12 @@
 from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.connections.database import DatabaseClient
 
 # Глобальный клиент - инициализируется один раз
 database_client = DatabaseClient()
+
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
@@ -28,7 +31,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
         @router.get("/users/{user_id}")
         async def get_user(
-            user_id: int,
+            user_id: uuid.UUID,
             db: AsyncSession = Depends(get_db_session)
         ):
             result = await db.execute(select(User).where(User.id == user_id))

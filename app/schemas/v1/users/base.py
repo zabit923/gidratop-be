@@ -13,6 +13,7 @@
 - UserCredentialsSchema: Для внутренней аутентификации
 """
 
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
@@ -20,10 +21,10 @@ from typing import Optional
 from pydantic import EmailStr, Field
 
 from app.models.v1.users import UserRole
-from app.schemas.v1.base import BaseSchema, CommonBaseSchema
+from app.schemas.v1.base import CommonBaseSchema, UserBaseSchema
 
 
-class UserSchema(BaseSchema):
+class UserSchema(UserBaseSchema):
     """
     Полная схема пользователя для внутренних API операций.
 
@@ -145,7 +146,7 @@ class UserSchema(BaseSchema):
     )
 
 
-class UserPublicSchema(BaseSchema):
+class UserPublicSchema(UserBaseSchema):
     """
     Публичная схема пользователя для других пользователей.
 
@@ -158,13 +159,13 @@ class UserPublicSchema(BaseSchema):
         role: Роль пользователя
         is_active: Статус активности
         total_orders: Количество заказов (для репутации)
-        created_at: Дата регистрации (наследуется от BaseSchema)
+        created_at: Дата регистрации (наследуется от UserBaseSchema)
 
     Usage:
         ```python
         # GET /api/v1/users/{user_id} - публичный профиль
         @router.get("/users/{user_id}", response_model=UserPublicSchema)
-        async def get_user_public_profile(user_id: int):
+        async def get_user_public_profile(user_id: uuid.UUID):
             return await user_service.get_public_profile(user_id)
 
         # GET /api/v1/users - список пользователей
@@ -205,7 +206,7 @@ class UserPrivateSchema(UserSchema):
     pass  # Наследует все поля от UserSchema
 
 
-class UserProfileSchema(BaseSchema):
+class UserProfileSchema(UserBaseSchema):
     """
     Схема для редактирования профиля пользователя.
 
@@ -299,7 +300,7 @@ class CurrentUserSchema(CommonBaseSchema):
         ```
     """
 
-    id: int = Field(description="ID пользователя")
+    id: uuid.UUID = Field(description="ID пользователя")
     username: str = Field(description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес")
     role: UserRole = Field(description="Роль пользователя")
@@ -307,7 +308,7 @@ class CurrentUserSchema(CommonBaseSchema):
     is_verified: bool = Field(description="Статус верификации")
 
 
-class UserDetailDataSchema(BaseSchema):
+class UserDetailDataSchema(UserBaseSchema):
     """
     Схема детальной информации о пользователе для административных целей.
 
@@ -324,15 +325,15 @@ class UserDetailDataSchema(BaseSchema):
         registration_source: Источник регистрации
         last_login: Время последнего входа
         total_orders: Общее количество заказов
-        created_at: Дата регистрации (наследуется от BaseSchema)
-        updated_at: Дата последнего обновления (наследуется от BaseSchema)
+        created_at: Дата регистрации (наследуется от UserBaseSchema)
+        updated_at: Дата последнего обновления (наследуется от UserBaseSchema)
 
     Usage:
         ```python
         # GET /api/v1/admin/users/{user_id} - детальная информация для админов
         @router.get("/admin/users/{user_id}", response_model=UserDetailDataSchema)
         async def get_user_details_admin(
-            user_id: int,
+            user_id: uuid.UUID,
             current_user: CurrentUserSchema = Depends(get_admin_user)
         ):
             return await admin_service.get_user_details(user_id)
@@ -376,7 +377,7 @@ class UserStatusDataSchema(CommonBaseSchema):
         ```python
         # GET /api/v1/users/{user_id}/status - статус конкретного пользователя
         @router.get("/users/{user_id}/status", response_model=UserStatusDataSchema)
-        async def get_user_status(user_id: int):
+        async def get_user_status(user_id: uuid.UUID):
             return await status_service.get_user_status(user_id)
 
         # WebSocket для реального времени
@@ -461,7 +462,7 @@ class UserCredentialsSchema(CommonBaseSchema):
         Содержит хешированный пароль - только для внутреннего использования.
     """
 
-    id: int = Field(description="Уникальный идентификатор пользователя")
+    id: uuid.UUID = Field(description="Уникальный идентификатор пользователя")
     username: str = Field(description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес пользователя")
     role: UserRole = Field(description="Роль пользователя")
@@ -470,7 +471,7 @@ class UserCredentialsSchema(CommonBaseSchema):
     is_verified: bool = Field(default=False, description="Статус верификации")
 
 
-class UserFinancialDataSchema(BaseSchema):
+class UserFinancialDataSchema(UserBaseSchema):
     """
     Схема финансовых данных пользователя.
 
@@ -496,7 +497,7 @@ class UserFinancialDataSchema(BaseSchema):
         # POST /api/v1/admin/users/{user_id}/balance - пополнение баланса админом
         @router.post("/admin/users/{user_id}/balance")
         async def add_balance(
-            user_id: int,
+            user_id: uuid.UUID,
             amount: Decimal,
             current_user: CurrentUserSchema = Depends(get_admin_user)
         ):
@@ -515,7 +516,7 @@ class UserFinancialDataSchema(BaseSchema):
     )
 
 
-class UserNotificationSettingsSchema(BaseSchema):
+class UserNotificationSettingsSchema(UserBaseSchema):
     """
     Схема настроек уведомлений пользователя.
 
@@ -553,7 +554,7 @@ class UserNotificationSettingsSchema(BaseSchema):
     marketing_consent: bool = Field(default=False, description="Согласие на маркетинг")
 
 
-class UserStatsSchema(BaseSchema):
+class UserStatsSchema(UserBaseSchema):
     """
     Схема статистики пользователя.
 
@@ -581,7 +582,7 @@ class UserStatsSchema(BaseSchema):
         # GET /api/v1/admin/users/{user_id}/stats - статистика для админа
         @router.get("/admin/users/{user_id}/stats", response_model=UserStatsSchema)
         async def get_user_stats_admin(
-            user_id: int,
+            user_id: uuid.UUID,
             current_user: CurrentUserSchema = Depends(get_admin_user)
         ):
             return await stats_service.get_user_stats(user_id)

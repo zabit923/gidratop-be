@@ -46,8 +46,8 @@ class TokenResponseSchema(BaseResponseSchema):
         }
     """
 
-    access_token: str
-    refresh_token: str
+    access_token: None | str
+    refresh_token: None | str
     token_type: str = "Bearer"
     expires_in: int
     message: str = "Авторизация успешна"

@@ -2,6 +2,7 @@ from app.schemas.v1.base import BaseResponseSchema
 
 from .base import ProfileSchema
 
+
 class ProfileResponseSchema(BaseResponseSchema):
     """
     Схема ответа на успешное получения данных профиля

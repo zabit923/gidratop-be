@@ -5,8 +5,10 @@
 """
 
 import logging
+import time
+import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from fastapi import Header
 from jose import jwt
@@ -157,7 +159,7 @@ class TokenManager:
         return {
             "sub": user.email,
             "expires_at": expires_at,
-            "user_id": user.id,
+            "user_id": str(user.id),  # Конвертируем UUID в строку
             "is_verified": user.is_verified,
             "role": user.role,
         }
@@ -201,7 +203,7 @@ class TokenManager:
     # Методы refresh токена
 
     @staticmethod
-    def create_refresh_payload(user_id: int) -> dict:
+    def create_refresh_payload(user_id: Union[int, uuid.UUID]) -> dict:
         """
         Создает payload для refresh токена.
 
@@ -216,13 +218,15 @@ class TokenManager:
             + settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60  # Дни в секунды
         )
         return {
-            "sub": str(user_id),
+            "sub": str(user_id),  # Всегда строка в JWT
             "expires_at": expires_at,
             "type": "refresh",
+            "iat": int(time.time()),
+            "jti": str(uuid.uuid4()),
         }
 
     @staticmethod
-    def validate_refresh_token(payload: dict) -> int:
+    def validate_refresh_token(payload: dict) -> uuid.UUID:
         """
         Валидирует данные из payload refresh токена.
 
@@ -230,7 +234,7 @@ class TokenManager:
             payload: Данные из токена
 
         Returns:
-            int: ID пользователя
+            uuid.UUID: ID пользователя
 
         Raises:
             TokenInvalidError: Если тип токена не refresh или отсутствует user_id
@@ -242,12 +246,12 @@ class TokenManager:
         if not user_id:
             raise TokenInvalidError("Отсутствует user_id в refresh токене")
 
-        return int(user_id)
+        return uuid.UUID(user_id)  # Конвертируем обратно в UUID
 
     # Методы токенов верификации
 
     @staticmethod
-    def generate_verification_token(user_id: int) -> str:
+    def generate_verification_token(user_id: Union[int, uuid.UUID]) -> str:
         """
         Генерирует токен для подтверждения email
 
@@ -270,7 +274,7 @@ class TokenManager:
         return TokenManager.generate_token(payload)
 
     @staticmethod
-    def validate_verification_token(payload: dict) -> int:
+    def validate_verification_token(payload: dict) -> uuid.UUID:
         """
         Валидирует токен верификации email.
 
@@ -278,7 +282,7 @@ class TokenManager:
             payload: Данные из токена
 
         Returns:
-            int: ID пользователя
+            uuid.UUID: ID пользователя
 
         Raises:
             TokenInvalidError: Если тип токена неверный
@@ -291,11 +295,11 @@ class TokenManager:
         if not user_id:
             raise TokenInvalidError("Отсутствует user_id в токене верификации")
 
-        return int(user_id)
+        return uuid.UUID(user_id)
 
     # Методы токенов востановления пароля
     @staticmethod
-    def generate_password_reset_token(user_id: int) -> str:
+    def generate_password_reset_token(user_id: Union[int, uuid.UUID]) -> str:
         """
         Генерирует токен для сброса пароля.
 
@@ -316,7 +320,7 @@ class TokenManager:
         return TokenManager.generate_token(payload)
 
     @staticmethod
-    def validate_password_reset_token(payload: dict) -> int:
+    def validate_password_reset_token(payload: dict) -> uuid.UUID:
         """
         Валидирует токен сброса пароля.
 
@@ -324,7 +328,7 @@ class TokenManager:
             payload: Данные из токена
 
         Returns:
-            int: ID пользователя
+            uuid.UUID: ID пользователя
 
         Raises:
             TokenInvalidError: Если тип токена неверный
@@ -337,7 +341,7 @@ class TokenManager:
         if not user_id:
             raise TokenInvalidError("Отсутствует user_id в токене сброса пароля")
 
-        return int(user_id)
+        return uuid.UUID(user_id)
 
     # Прочие методы токенов
     @staticmethod
@@ -443,7 +447,7 @@ class TokenManager:
         return TokenManager.generate_token(payload)
 
     @staticmethod
-    def create_refresh_token(user_id: int) -> str:
+    def create_refresh_token(user_id: Union[int, uuid.UUID]) -> str:
         """
         Создает refresh токен для пользователя.
 
@@ -458,13 +462,13 @@ class TokenManager:
 
         Example:
             ```python
-            refresh_token = TokenManager.create_refresh_token(123)
-            # Токен будет содержать: {"type": "refresh", "sub": "123", ...}
+            refresh_token = TokenManager.create_refresh_token(user_id)
+            # Токен будет содержать: {"type": "refresh", "sub": "550e8400-e29b-41d4-a716-446655440000", ...}
             ```
         """
         payload = TokenManager.create_refresh_payload(user_id)
 
-        logger.debug("Создан refresh токен", extra={"user_id": user_id})
+        logger.debug("Создан refresh токен", extra={"user_id": str(user_id)})
 
         return TokenManager.generate_token(payload)
 
@@ -490,7 +494,7 @@ class TokenManager:
         return payload.get("limited", False)
 
     @staticmethod
-    def get_user_id_from_payload(payload: dict) -> int:
+    def get_user_id_from_payload(payload: dict) -> uuid.UUID:
         """
         !Не использован в коде!
         Извлекает ID пользователя из payload токена.
@@ -499,7 +503,7 @@ class TokenManager:
             payload: Декодированные данные токена
 
         Returns:
-            int: ID пользователя
+            uuid.UUID: ID пользователя
 
         Raises:
             TokenInvalidError: Если user_id отсутствует в токене
@@ -507,7 +511,7 @@ class TokenManager:
         user_id = payload.get("user_id")
         if not user_id:
             raise TokenInvalidError("Отсутствует user_id в токене")
-        return int(user_id)
+        return uuid.UUID(user_id)
 
     @staticmethod
     def upgrade_token_to_full(user_schema: Any) -> str:

@@ -10,11 +10,15 @@ dependencies = [
   "faststream[cli,rabbit]>=0.5.42",
   "greenlet>=3.2.2",
   "itsdangerous>=2.2.0",
+  "httpx>=0.28.1",
   "jinja2>=3.1.6",
   "passlib>=1.7.4",
   "pre-commit>=4.2.0",
   "pydantic-settings>=2.9.1",
   "pydantic[email]>=2.11.5",
+  "pytest>=8.3.5",
+  "pytest-asyncio>=0.26.0",
+  "pytest-cov>=6.1.1",
   "python-jose>=3.4.0",
   "python-multipart>=0.0.20",
   "pytz>=2025.2",
@@ -22,6 +26,7 @@ dependencies = [
   "sqlalchemy>=2.0.41",
   "starlette-admin>=0.15.1",
   "uvicorn>=0.34.2",
+  "vulture>=2.14",
 ]
 description = "Add your description here"
 name = "gidrator-backend"
@@ -57,15 +62,31 @@ start = "scripts.commands:start_all"
 test = "scripts.commands:test"
 
 [tool.pytest.ini_options]
+addopts = [
+  "-v",
+  "--tb=short",
+  "--strict-markers",
+  "--disable-warnings",
+]
 asyncio_default_fixture_loop_scope = "function"
-asyncio_mode = "strict"
+asyncio_mode = "auto"
 filterwarnings = [
   "ignore::pydantic.PydanticDeprecatedSince20",
+  "ignore::DeprecationWarning",
 ]
 markers = [
-  "integration: marks tests as integration tests",
+  "unit: Unit tests (fast, mocked)",
+  "integration: Integration tests (mocked external services)",
+  "functional: Functional tests (real DB, full cycle)",
+  "security: Security tests",
+  "performance: Performance tests",
+  "e2e: End-to-end tests (full user scenarios)",
+  "slow: marks tests as slow",
 ]
-
+python_classes = ["Test*"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
 [tool.mypy]
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
@@ -76,6 +97,11 @@ module = "app.core.migrations.*"
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=61.0"]
+
+[dependency-groups]
+dev = [
+  "pytest-httpx>=0.35.0",
+]
 
 [tool.pylint.messages_control]
 disable = [

@@ -15,6 +15,7 @@ from .categories import CategoryAlreadyExistsError, CategoryNotFoundError
 from .common import InvalidFileTypeError, StorageError
 from .products import ProductNotFoundError
 from .profile import ProfileNotFoundError
+from .rate_limit import RateLimitExceededError
 from .users import ForbiddenError, UserCreationError, UserExistsError, UserNotFoundError
 
 __all__ = [
@@ -39,4 +40,5 @@ __all__ = [
     "InvalidFileTypeError",
     "StorageError",
     "ProductNotFoundError",
+    "RateLimitExceededError",
 ]
