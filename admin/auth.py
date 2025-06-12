@@ -2,11 +2,10 @@ from fastapi.params import Depends
 from redis import Redis
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette_admin.auth import AdminConfig, AuthProvider
+from starlette_admin.auth import AdminConfig, AdminUser, AuthProvider
 from starlette_admin.exceptions import LoginFailed
 
-from app.core.connections.database import get_db_session
-from app.core.dependencies import get_redis_client
+from app.core.dependencies import get_db_session, get_redis_client
 from app.core.security.password import PasswordHasher
 from app.services.v1.auth.service import AuthService
 
@@ -47,6 +46,11 @@ class CustomAuthProvider(AuthProvider):
         return AdminConfig(
             app_title=custom_app_title,
         )
+
+    def get_admin_user(self, request: Request) -> AdminUser:
+        user = request.state.user
+        photo_url = "https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg"
+        return AdminUser(username=user.username, photo_url=photo_url)
 
     async def logout(self, request: Request, response: Response) -> Response:
         request.session.clear()

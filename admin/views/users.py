@@ -1,4 +1,9 @@
+from typing import Any, Dict
+
+from starlette.requests import Request
 from starlette_admin.contrib.sqla import ModelView
+
+from app.core.security.password import pwd_context
 
 
 class UserAdmin(ModelView):
@@ -44,3 +49,13 @@ class UserAdmin(ModelView):
         "payment_methods",
         "addresses",
     ]
+
+    async def create(self, request: Request, data: Dict[str, Any]) -> Any:
+        if "hashed_password" in data:
+            data["hashed_password"] = pwd_context.hash(data["hashed_password"])
+        return await super().create(request, data)
+
+    async def edit(self, request: Request, pk: Any, data: Dict[str, Any]) -> Any:
+        if "hashed_password" in data:
+            data["hashed_password"] = pwd_context.hash(data["hashed_password"])
+        return await super().edit(request, pk, data)

@@ -27,6 +27,8 @@ from .v1.base import (
     ItemResponseSchema,
     ListResponseSchema,
 )
+from .v1.cart_items import CartItemDataSchema
+from .v1.carts import CartDataSchema
 from .v1.categories import (
     CategoryCreateSchema,
     CategoryDataSchema,
@@ -175,4 +177,8 @@ __all__ = [
     "ProductResponseSchema",
     "ProductListResponseSchema",
     "ProductUpdateSchema",
+    # Cart Items
+    "CartItemDataSchema",
+    # Carts
+    "CartDataSchema",
 ]

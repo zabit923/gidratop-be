@@ -46,6 +46,7 @@ packages = ["app", "scripts"]
 activate = "scripts.commands:activate"
 check = "scripts.commands:check"
 dev = "scripts.commands:dev"
+create_superuser = "scripts.commands:run_create_superuser"
 format = "scripts.commands:format"
 lint = "scripts.commands:lint"
 migrate = "scripts.commands:migrate"

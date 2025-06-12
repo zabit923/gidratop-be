@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.admin.config import admin
+from admin.config import admin
 from app.core.exceptions.handlers import register_exception_handlers
 from app.core.integrations.messaging.setup import setup_messaging
 from app.core.logging import setup_logging
