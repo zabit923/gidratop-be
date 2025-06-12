@@ -15,7 +15,8 @@ jobs:
         POSTGRES_HOST: postgres
         POSTGRES_PORT: 5432
 
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        TOKEN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        COOKIE_DOMAIN: localhost
 
         REDIS_HOST: redis
         REDIS_PORT: 6379
