@@ -131,4 +131,4 @@ jobs:
     - name: Run Tests
       run: |
         export PATH="/root/.cargo/bin:$PATH"
-        python -m pytest -v -s
+        uv run python -m pytest -v -s
