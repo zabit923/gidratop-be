@@ -9,7 +9,7 @@ jobs:
     container:
       image: python:3.11
       env:
-        POSTGRES_DB: postgres
+        POSTGRES_DB: gidratop
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
         POSTGRES_HOST: postgres
@@ -43,7 +43,7 @@ jobs:
       postgres:
         image: postgres:14-alpine
         env:
-          POSTGRES_DB: postgres
+          POSTGRES_DB: gidratop
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:

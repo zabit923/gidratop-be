@@ -12,18 +12,19 @@
 """
 import uuid
 from unittest.mock import AsyncMock, patch
-import pytest_asyncio
+
 import asyncpg
-from httpx import AsyncClient, ASGITransport
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.main import app
-from app.models.v1.base import BaseModel
-from app.models.v1.users import UserRole
 from app.core.dependencies import get_db_session
 from app.core.security.auth import get_current_user
 from app.core.settings import settings
+from app.main import app
+from app.models.v1.base import BaseModel
+from app.models.v1.users import UserRole
 from app.schemas import CurrentUserSchema
 
 
@@ -50,7 +51,7 @@ async def test_engine():
         port=settings.POSTGRES_PORT,
         user=settings.POSTGRES_USER,
         password=settings.POSTGRES_PASSWORD.get_secret_value(),
-        database='postgres'  # Подключаемся к системной БД
+        database="postgres",  # Подключаемся к системной БД
     )
 
     try:
@@ -62,9 +63,7 @@ async def test_engine():
         await conn.close()
 
     # Создаем URL для подключения к тестовой БД
-    test_db_url = settings.database_url.replace(
-        settings.POSTGRES_DB, test_db_name
-    )
+    test_db_url = settings.database_url.replace(settings.POSTGRES_DB, test_db_name)
 
     # Создаем движок SQLAlchemy для тестовой БД
     engine = create_async_engine(
@@ -89,13 +88,12 @@ async def test_engine():
         port=settings.POSTGRES_PORT,
         user=settings.POSTGRES_USER,
         password=settings.POSTGRES_PASSWORD.get_secret_value(),
-        database='postgres'
+        database="postgres",
     )
     try:
         await conn.execute(f'DROP DATABASE IF EXISTS "{test_db_name}"')
     finally:
         await conn.close()
-
 
 
 @pytest_asyncio.fixture
@@ -127,8 +125,7 @@ async def db_session(test_engine):
 
     # Создаем сессию SQLAlchemy привязанную к этому подключению
     session = AsyncSession(
-        bind=connection,
-        expire_on_commit=False  # Не сбрасывать объекты после commit
+        bind=connection, expire_on_commit=False  # Не сбрасывать объекты после commit
     )
 
     try:
@@ -158,8 +155,9 @@ async def mock_user():
         email="test@example.com",
         role=UserRole.USER,
         is_active=True,
-        is_verified=True
+        is_verified=True,
     )
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def mock_messaging():
@@ -174,9 +172,12 @@ async def mock_messaging():
 
     Без этого мока тесты пытались бы отправлять реальные email!
     """
-    with patch('app.core.integrations.messaging.producers.broker.publish') as mock_publish:
+    with patch(
+        "app.core.integrations.messaging.producers.broker.publish"
+    ) as mock_publish:
         mock_publish.return_value = AsyncMock()
         yield mock_publish
+
 
 @pytest_asyncio.fixture
 async def client(db_session):
@@ -208,7 +209,7 @@ async def client(db_session):
         # Создаем HTTP клиент для тестирования FastAPI приложения
         async with AsyncClient(
             transport=ASGITransport(app=app),  # Используем ASGI транспорт
-            base_url="http://testserver"  # Базовый URL для запросов
+            base_url="http://testserver",  # Базовый URL для запросов
         ) as ac:
             yield ac  # Возвращаем клиент для использования в тестах
     finally:
