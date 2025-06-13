@@ -9,3 +9,7 @@ class UserAddressAdmin(ModelView):
         "postal_code",
         "country",
     ]
+    exclude_fields_from_create = [
+        "created_at",
+        "updated_at",
+    ]

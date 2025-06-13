@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import CartItem
-from app.schemas import CartItemDataSchema
+from app.models import Cart, CartItem, Product
+from app.schemas import CartItemCreateSchema, CartItemDataSchema
 from app.services.v1.base import BaseEntityManager
 
 
@@ -19,3 +19,13 @@ class CartItemDataManager(BaseEntityManager[CartItemDataSchema]):
 
     def __init__(self, session: AsyncSession):
         super().__init__(session=session, schema=CartItemDataSchema, model=CartItem)
+
+    async def add_cart_item(
+        self, product: Product, cart: Cart, data: CartItemCreateSchema
+    ) -> CartItem:
+        cart_item_model = CartItem(
+            cart_id=cart.id,
+            product_id=product.id,
+            quantity=data.quantity,
+        )
+        return await self.add_one(cart_item_model)

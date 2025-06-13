@@ -14,6 +14,8 @@ from app.core.integrations.storage import ProductS3DataManager
 from app.models import Product, UserModel
 from app.schemas import PaginationParams, ProductCreateSchema, ProductResponseSchema
 from app.services.v1.base import BaseService
+from app.services.v1.cart_items.data_manager import CartItemDataManager
+from app.services.v1.carts.data_manager import CartDataManager
 from app.services.v1.categories.data_manager import CategoryDataManager
 from app.services.v1.products.data_manager import ProductDataManager
 
@@ -44,6 +46,8 @@ class ProductService(BaseService):
         super().__init__(session)
         self.data_manager = ProductDataManager(session)
         self.category_data_manager = CategoryDataManager(session)
+        self.cart_data_manager = CartDataManager(session)
+        self.cart_item_data_manager = CartItemDataManager(session)
         self.s3_data_manager = s3_data_manager
 
     async def get_all_products(
