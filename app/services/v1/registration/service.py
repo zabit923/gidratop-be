@@ -94,12 +94,8 @@ class RegisterService(BaseService):
             UserCreationError: При ошибке создания в БД
         """
 
-        self.logger.info("Начало регистрации пользователя: %s", user_data.username)
-
         # Валидируем уникальность данных
-        await self.data_manager.validate_user_uniqueness(
-            username=user_data.username, email=user_data.email, phone=user_data.phone
-        )
+        await self.data_manager.validate_user_uniqueness(email=user_data.email)
 
         # Создаем пользователя
         created_user = await self.data_manager.create_user_from_registration(user_data)
@@ -403,7 +399,6 @@ class RegisterService(BaseService):
             verification_token = TokenManager.generate_verification_token(user.id)
             await self.email_data_manager.send_verification_email(
                 to_email=user.email,
-                user_name=user.username,
                 verification_token=verification_token,
             )
             self.logger.info(

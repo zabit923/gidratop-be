@@ -23,11 +23,9 @@ class VerificationEmailSchema(EmailMessageSchema):
     Схема для письма верификации
 
     Attributes:
-        user_name (str): Имя пользователя для персонализации письма
         verification_token (str): Токен для верификации email
     """
 
-    user_name: str
     verification_token: str
 
 

@@ -54,7 +54,6 @@ class TestRegistrationAPI:
         """
         # 1. Подготовка тестовых данных
         user_data = {
-            "username": "testuser",
             "email": "test@example.com",
             "password": "SecurePass123!",
             "phone": "+7 (999) 123-45-67"
@@ -84,7 +83,6 @@ class TestRegistrationAPI:
 
         # Проверяем что пользователь найден и данные корректны
         assert user is not None
-        assert user.username == user_data["username"]
         assert user.email == user_data["email"]
         # Пароль должен быть захеширован, не в открытом виде :)
         assert user.hashed_password != user_data["password"]
@@ -174,69 +172,6 @@ class TestRegistrationAPI:
         error_detail = data["error"]["detail"].lower()
         assert "email" in error_detail
         assert "duplicate@example.com" in error_detail
-
-    @pytest.mark.asyncio
-    @pytest.mark.functional
-    async def test_duplicate_username_registration(self, client: AsyncClient):
-        """
-        Тест регистрации с дублирующимся username.
-
-        Аналогично тесту с email, но проверяем уникальность username
-        """
-        user_data = {
-            "username": "duplicateuser",
-            "email": "user1@example.com",
-            "password": "SecurePass123!"
-        }
-
-        # Первая регистрация
-        response1 = await client.post("/api/v1/register", json=user_data)
-        assert response1.status_code == 200
-
-        # Попытка повторной регистрации с тем же username, но другим email
-        user_data["email"] = "user2@example.com"
-        response2 = await client.post("/api/v1/register", json=user_data)
-
-        assert response2.status_code == 409
-        data = response2.json()
-        assert data["success"] is False
-
-        error_detail = data["error"]["detail"].lower()
-        assert "username" in error_detail
-        assert "duplicateuser" in error_detail
-
-    @pytest.mark.asyncio
-    @pytest.mark.functional
-    async def test_duplicate_phone_registration(self, client: AsyncClient):
-        """
-        Тест регистрации с дублирующимся телефоном.
-
-        Проверяем уникальность номера телефона
-        """
-        user_data = {
-            "username": "user1",
-            "email": "user1@example.com",
-            "password": "SecurePass123!",
-            "phone": "+7 (999) 123-45-67"
-        }
-
-        # Первая регистрация
-        response1 = await client.post("/api/v1/register", json=user_data)
-        assert response1.status_code == 200
-
-        # Попытка повторной регистрации с тем же телефоном
-        user_data.update({
-            "username": "user2",
-            "email": "user2@example.com"
-        })
-        response2 = await client.post("/api/v1/register", json=user_data)
-
-        assert response2.status_code == 409
-        data = response2.json()
-        assert data["success"] is False
-
-        error_detail = data["error"]["detail"].lower()
-        assert "phone" in error_detail or "телефон" in error_detail
 
         @pytest.mark.asyncio
         @pytest.mark.functional

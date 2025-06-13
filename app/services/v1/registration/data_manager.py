@@ -28,36 +28,23 @@ class RegisterDataManager(UserDataManager):
     def __init__(self, session: AsyncSession):
         super().__init__(session)
 
-    async def validate_user_uniqueness(
-        self, username: str, email: str, phone: Optional[str] = None
-    ) -> None:
+    async def validate_user_uniqueness(self, email: str) -> None:
         """
         Проверяет уникальность данных пользователя одним запросом.
 
         Args:
-            username: Имя пользователя
             email: Email пользователя
-            phone: Телефон пользователя (опционально)
 
         Raises:
             UserExistsError: Если найден дубликат
         """
-        conditions = [UserModel.username == username, UserModel.email == email]
-
-        if phone:
-            conditions.append(UserModel.phone == phone)
+        conditions = [UserModel.email == email]
 
         statement = select(UserModel).where(or_(*conditions))
         existing_user = await self.get_one(statement)
 
         if existing_user:
-            # Определяем какое поле дублируется
-            if existing_user.username == username:
-                raise UserExistsError("username", username)
-            elif existing_user.email == email:
-                raise UserExistsError("email", email)
-            elif phone and existing_user.phone == phone:
-                raise UserExistsError("phone", phone)
+            raise UserExistsError("email", email)
 
     async def create_user_from_registration(
         self, user_data: RegistrationRequestSchema
@@ -76,9 +63,7 @@ class RegisterDataManager(UserDataManager):
         """
         try:
             user_model = UserModel(
-                username=user_data.username,
                 email=user_data.email,
-                phone=user_data.phone,
                 hashed_password=PasswordHasher.hash_password(user_data.password),
                 role=UserRole.USER,
                 is_active=True,

@@ -22,7 +22,7 @@ class AuthEmailDataManager(BaseEmailDataManager):
         self.producer = EmailProducer()
 
     async def send_verification_email(
-        self, to_email: str, user_name: str, verification_token: str
+        self, to_email: str, verification_token: str
     ):
         """
         Отправляет email с ссылкой для верификации аккаунта.
@@ -32,7 +32,6 @@ class AuthEmailDataManager(BaseEmailDataManager):
 
         Args:
             to_email: Email адрес получателя
-            user_name: Имя пользователя для персонализации письма
             verification_token: Токен для верификации email
 
         Returns:
@@ -40,20 +39,19 @@ class AuthEmailDataManager(BaseEmailDataManager):
         """
         self.logger.info(
             "Подготовка письма верификации",
-            extra={"to_email": to_email, "user_name": user_name},
+            extra={"to_email": to_email},
         )
 
         try:
             return await self.producer.send_verification_email(
                 to_email=to_email,
-                user_name=user_name,
                 verification_token=verification_token,
             )
         except Exception as e:
             self.logger.error(
                 "Ошибка при подготовке письма верификации: %s",
                 e,
-                extra={"to_email": to_email, "user_name": user_name},
+                extra={"to_email": to_email},
             )
             raise
 

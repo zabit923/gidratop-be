@@ -58,21 +58,19 @@ class EmailProducer(MessageProducer):
         return await self.publish(message.model_dump(), "email_queue")
 
     async def send_verification_email(
-        self, to_email: str, user_name: str, verification_token: str
+        self, to_email: str, verification_token: str
     ) -> bool:
         """
         Отправляет задачу на отправку письма верификации в очередь RabbitMQ.
 
         Args:
             to_email (str): Email адрес получателя
-            user_name (str): Имя пользователя
             verification_token (str): Токен верификации
         """
         message = VerificationEmailSchema(
             to_email=to_email,
             subject="Подтверждение email адреса",
             body="",  # Будет заполнено в обработчике
-            user_name=user_name,
             verification_token=verification_token,
         )
 

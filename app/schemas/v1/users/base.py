@@ -463,7 +463,7 @@ class UserCredentialsSchema(CommonBaseSchema):
     """
 
     id: uuid.UUID = Field(description="Уникальный идентификатор пользователя")
-    username: str = Field(description="Имя пользователя")
+    username: Optional[str] = Field(None, description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес пользователя")
     role: UserRole = Field(description="Роль пользователя")
     hashed_password: str = Field(description="Хешированный пароль")

@@ -206,7 +206,7 @@ class TestRegisterRouter:
         error_fields = [err["loc"][-1] for err in validation_errors]
 
         # Проверяем наличие обязательных полей
-        required_fields = ["username", "email", "password"]
+        required_fields = ["email", "password"]
         for field in required_fields:
             assert field in error_fields, f"Поле '{field}' должно быть в списке ошибок валидации"
 

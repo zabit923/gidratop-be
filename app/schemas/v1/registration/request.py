@@ -23,9 +23,7 @@ class RegistrationRequestSchema(BaseRequestSchema):
     и корректности формата контактных данных.
 
     Attributes:
-        username (str): Имя пользователя (от 1 до 50 символов)
         email (EmailStr): Email адрес пользователя (автоматическая валидация формата)
-        phone (str | None): Номер телефона в российском формате (опционально)
         password (str): Пароль с проверкой требований безопасности
 
     Validation Rules:
@@ -45,23 +43,9 @@ class RegistrationRequestSchema(BaseRequestSchema):
         ```
     """
 
-    username: str = Field(
-        min_length=1,
-        max_length=50,
-        description="Имя пользователя (от 1 до 50 символов)",
-        examples=["john_doe", "user123", "admin"],
-    )
-
     email: EmailStr = Field(
         description="Email адрес пользователя",
         examples=["user@example.com", "john.doe@company.org"],
-    )
-
-    phone: str | None = Field(
-        default=None,
-        pattern=r"^\+7\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}$",
-        description="Номер телефона в российском формате +7 (XXX) XXX-XX-XX",
-        examples=["+7 (999) 123-45-67", "+7 (495) 000-00-00"],
     )
 
     password: str = Field(

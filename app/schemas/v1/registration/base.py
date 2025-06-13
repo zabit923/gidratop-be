@@ -64,7 +64,8 @@ class RegistrationDataSchema(BaseCommonResponseSchema):
         ],
     )
 
-    username: str = Field(
+    username: Optional[str] = Field(
+        None,
         description="Имя пользователя для входа в систему",
         examples=["john_doe", "user123", "admin"],
     )

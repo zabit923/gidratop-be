@@ -76,7 +76,7 @@ class UserModel(BaseModel):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False
     )
     # Аутентификация
-    username: Mapped[str] = mapped_column(unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(unique=True, nullable=True)
     email: Mapped[str] = mapped_column(unique=True, nullable=False)
     phone: Mapped[str] = mapped_column(unique=True, nullable=True)
     hashed_password: Mapped[str] = mapped_column(nullable=False)
