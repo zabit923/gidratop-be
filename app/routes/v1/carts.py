@@ -6,11 +6,7 @@ from app.core.dependencies import get_db_session
 from app.core.security.auth import get_current_user
 from app.models import UserModel
 from app.routes.base import BaseRouter
-from app.schemas import (
-    CartItemCreateSchema,
-    CategoryResponseSchema,
-    ProductResponseSchema,
-)
+from app.schemas import CartItemCreateSchema, CartResponseSchema
 from app.services.v1.carts.service import CartService
 
 
@@ -21,7 +17,7 @@ class CartRouter(BaseRouter):
     def configure(self):
         @self.router.post(
             path="/add-to-cart",
-            response_model=ProductResponseSchema,
+            response_model=CartResponseSchema,
             status_code=status.HTTP_201_CREATED,
             summary="Добавление товара в корзину",
         )
@@ -29,5 +25,5 @@ class CartRouter(BaseRouter):
             data: CartItemCreateSchema,
             user: UserModel = Depends(get_current_user),
             session: AsyncSession = Depends(get_db_session),
-        ) -> CategoryResponseSchema:
+        ) -> CartResponseSchema:
             return await CartService(session).add_product_to_cart(user, data)

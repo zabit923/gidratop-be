@@ -1,4 +1,6 @@
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.models import Cart, CartItem, Product
 from app.schemas import CartItemCreateSchema, CartItemDataSchema
@@ -29,3 +31,12 @@ class CartItemDataManager(BaseEntityManager[CartItemDataSchema]):
             quantity=data.quantity,
         )
         return await self.add_one(cart_item_model)
+
+    async def get_cart_items(self, cart_id: int):
+        query = (
+            select(CartItem)
+            .options(joinedload(CartItem.product).joinedload(Product.category))
+            .where(CartItem.cart_id == cart_id)
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()

@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import Field
 
-from app.schemas import BaseSchema, CategoryDataSchema
+from app.schemas.v1.base import BaseSchema
 
 
 class ProductDataSchema(BaseSchema):
@@ -35,7 +35,6 @@ class ProductDataSchema(BaseSchema):
             "Интересная книга по программированию",
         ],
     )
-    category: Optional["CategoryDataSchema"] = None
     price: float = Field(description="Цена продукта", examples=[999.99, 499.99, 19.99])
     brand: Optional[str] = Field(
         default=None,

@@ -1,6 +1,7 @@
 from pydantic import Field
 
 from app.schemas import BaseSchema
+from app.schemas.v1.products import ProductDataSchema
 
 
 class CartItemDataSchema(BaseSchema):
@@ -20,3 +21,4 @@ class CartItemDataSchema(BaseSchema):
         description="Идентификатор продукта, который добавлен в корзину"
     )
     quantity: int = Field(description="Количество данного продукта в корзине", ge=1)
+    product: "ProductDataSchema" = Field(description="Продукт, добавленный в корзину")
