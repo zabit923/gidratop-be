@@ -31,6 +31,7 @@ from .v1.cart_items import (
     CartItemCreateSchema,
     CartItemDataSchema,
     CartItemResponseSchema,
+    CartItemUpdateSchema,
 )
 from .v1.carts import CartDataSchema, CartResponseSchema
 from .v1.categories import (
@@ -186,6 +187,7 @@ __all__ = [
     "CartItemDataSchema",
     "CartItemCreateSchema",
     "CartItemResponseSchema",
+    "CartItemUpdateSchema",
     # Carts
     "CartDataSchema",
     "CartResponseSchema",

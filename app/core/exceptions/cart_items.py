@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from starlette import status
 
@@ -29,4 +29,33 @@ class OutOfStockError(BaseAPIException):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
             error_type="quantity_out_of_stock",
+        )
+
+
+class CartItemNotFoundError(BaseAPIException):
+    """
+    Исключение, возникающее при попытке получить или удалить товар из корзины,
+    когда товар не найден в корзине.
+
+    Attributes:
+        field (Optional[str]): Поле, по которому не найден товар.
+        value (Any): Значение поля, по которому не найден товар.
+        detail (Optional[str]): Дополнительное сообщение об ошибке.
+    """
+
+    def __init__(
+        self,
+        field: Optional[str] = None,
+        value: Any = None,
+        detail: Optional[str] = None,
+    ):
+        message = detail or "Элемент корзины не найден"
+        if field and value is not None:
+            message = f"Элемент корзины с {field}={value} не найден"
+
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message,
+            error_type="cart_item_not_found",
+            extra={"field": field, "value": value} if field else None,
         )
