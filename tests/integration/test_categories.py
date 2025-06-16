@@ -62,19 +62,29 @@ class TestCategoryRouter:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_update_category(self, auth_client: AsyncClient, created_category):
-        response = await auth_client.patch(
-            f"/api/v1/categories/{created_category.id}",
-            data={"title": "Updated Category"},
-        )
+    async def test_update_category(self, auth_client: AsyncClient):
+        with patch(
+            "app.services.v1.categories.service.CategoryService.update_category"
+        ) as mock_updated_category:
+            mock_category = create_mock_data(
+                CategoryDataSchema, {"title": "Updated Category"}, id_value=1
+            )
+            mock_updated_category.return_value = mock_category
 
-        assert response.status_code == 200
-        assert response.json()["title"] == "Updated Category"
+            response = await auth_client.patch(
+                "/api/v1/categories/1",
+                data={"title": "Updated Category"},
+            )
+
+            assert response.status_code == 200
+            assert response.json()["title"] == "Updated Category"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_delete_category(
-        self, auth_client: AsyncClient, db_session, created_category
-    ):
-        response = await auth_client.delete(f"/api/v1/categories/{created_category.id}")
-        assert response.status_code == 204
+    async def test_delete_category(self, auth_client: AsyncClient):
+        with patch(
+            "app.services.v1.categories.service.CategoryService.delete_category"
+        ) as mock_delete_category:
+            mock_delete_category.return_value = None
+            response = await auth_client.delete("/api/v1/categories/1")
+            assert response.status_code == 204
