@@ -11,7 +11,7 @@ from app.services.v1.base import BaseEntityManager
 
 class ProductDataManager(BaseEntityManager[ProductDataSchema]):
     """
-    Менеджер данных для работы с продуктами.
+    Менеджер данных для работы с продуктами..
     Реализует низкоуровневые операции для работы с таблицами продуктов в БД.
     Обрабатывает исключения БД и преобразует их в доменные исключения.
     Attributes:
