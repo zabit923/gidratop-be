@@ -14,8 +14,6 @@ from app.core.integrations.storage import ProductS3DataManager
 from app.models import Product, UserModel
 from app.schemas import PaginationParams, ProductCreateSchema, ProductResponseSchema
 from app.services.v1.base import BaseService
-from app.services.v1.cart_items.data_manager import CartItemDataManager
-from app.services.v1.carts.data_manager import CartDataManager
 from app.services.v1.categories.data_manager import CategoryDataManager
 from app.services.v1.products.data_manager import ProductDataManager
 
@@ -46,8 +44,6 @@ class ProductService(BaseService):
         super().__init__(session)
         self.data_manager = ProductDataManager(session)
         self.category_data_manager = CategoryDataManager(session)
-        self.cart_data_manager = CartDataManager(session)
-        self.cart_item_data_manager = CartItemDataManager(session)
         self.s3_data_manager = s3_data_manager
 
     async def get_all_products(
@@ -167,3 +163,78 @@ class ProductService(BaseService):
         await self.data_manager.updata_product_images(product, image_urls)
         updated_product = await self.data_manager.get_by_id(product_id)
         return ProductResponseSchema.model_validate(updated_product)
+
+    async def get_best_sellers(
+        self,
+        pagination: PaginationParams,
+        limit: int = 10
+    ) -> Tuple[List[ProductResponseSchema], int]:
+        """
+        Получает список самых продаваемых продуктов (хиты продаж).
+
+        Args:
+            pagination: Параметры пагинации.
+            limit: Максимальное количество продуктов (по умолчанию 10).
+
+        Returns:
+            Кортеж (список продуктов, общее количество).
+        """
+        products, total = await self.data_manager.get_best_selling_products(
+            pagination,
+            limit
+        )
+        return [
+            ProductResponseSchema.model_validate(product) for product in products
+        ], total
+
+    async def get_top_discounts(
+        self,
+        pagination: PaginationParams,
+        min_discount: float = 10.0,
+        limit: int = 10
+    ) -> Tuple[List[ProductResponseSchema], int]:
+        """
+        Получает список продуктов с самыми большими скидками.
+
+        Args:
+            pagination: Параметры пагинации.
+            min_discount: Минимальный размер скидки для включения в список (по умолчанию 10%).
+            limit: Максимальное количество продуктов (по умолчанию 10).
+
+        Returns:
+            Кортеж (список продуктов, общее количество).
+        """
+        products, total = await self.data_manager.get_products_with_biggest_discounts(
+            pagination,
+            min_discount,
+            limit
+        )
+        return [
+            ProductResponseSchema.model_validate(product) for product in products
+        ], total
+
+    async def get_new_arrivals(
+        self,
+        pagination: PaginationParams,
+        days_threshold: int = 30,
+        limit: int = 10
+    ) -> Tuple[List[ProductResponseSchema], int]:
+        """
+        Получает список недавно добавленных продуктов (новинки).
+
+        Args:
+            pagination: Параметры пагинации.
+            days_threshold: Максимальный возраст продукта в днях (по умолчанию 30).
+            limit: Максимальное количество продуктов (по умолчанию 10).
+
+        Returns:
+            Кортеж (список продуктов, общее количество).
+        """
+        products, total = await self.data_manager.get_recently_added_products(
+            pagination,
+            days_threshold,
+            limit
+        )
+        return [
+            ProductResponseSchema.model_validate(product) for product in products
+        ], total

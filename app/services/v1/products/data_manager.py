@@ -11,7 +11,7 @@ from app.services.v1.base import BaseEntityManager
 
 class ProductDataManager(BaseEntityManager[ProductDataSchema]):
     """
-    Менеджер данных для работы с продуктами..
+    Менеджер данных для работы с продуктами.
     Реализует низкоуровневые операции для работы с таблицами продуктов в БД.
     Обрабатывает исключения БД и преобразует их в доменные исключения.
     Attributes:
@@ -81,3 +81,58 @@ class ProductDataManager(BaseEntityManager[ProductDataSchema]):
             raise RuntimeError(
                 f"Не удалось обновить изображения для продукта {product.id}"
             )
+
+    async def get_best_selling_products(
+        self,
+        pagination: PaginationParams,
+        limit: int = 10
+    ) -> tuple[list[Product], int]:
+        try:
+            statement = (
+                select(Product)
+                .order_by(Product.sales_count.desc())
+                .limit(limit)
+            )
+            return await self.get_paginated_items(statement, pagination)
+        except SQLAlchemyError as e:
+            self.logger.error("Ошибка при получении хитов продаж: %s", str(e))
+            raise RuntimeError("Не удалось получить хиты продаж") from e
+
+    async def get_products_with_biggest_discounts(
+        self,
+        pagination: PaginationParams,
+        min_discount: float = 10.0,
+        limit: int = 10
+    ) -> tuple[list[Product], int]:
+        try:
+            statement = (
+                select(Product)
+                .where(Product.discount >= min_discount)
+                .order_by(Product.discount.desc())
+                .limit(limit)
+            )
+            return await self.get_paginated_items(statement, pagination)
+        except SQLAlchemyError as e:
+            self.logger.error("Ошибка при получении товаров со скидками: %s", str(e))
+            raise RuntimeError("Не удалось получить товары со скидками") from e
+
+    async def get_recently_added_products(
+        self,
+        pagination: PaginationParams,
+        days_threshold: int = 30,
+        limit: int = 10
+    ) -> tuple[list[Product], int]:
+        try:
+            from datetime import datetime, timedelta
+            threshold_date = datetime.utcnow() - timedelta(days=days_threshold)
+
+            statement = (
+                select(Product)
+                .where(Product.created_at >= threshold_date)
+                .order_by(Product.created_at.desc())
+                .limit(limit)
+            )
+            return await self.get_paginated_items(statement, pagination)
+        except SQLAlchemyError as e:
+            self.logger.error("Ошибка при получении новинок: %s", str(e))
+            raise RuntimeError("Не удалось получить новинки") from e
