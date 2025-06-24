@@ -104,6 +104,7 @@ class TestProductRouter:
             mock_delete_product.return_value = None
             response = await auth_client.delete("/api/v1/products/1")
             assert response.status_code == 204
+
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_get_best_sellers(self, client: AsyncClient):
@@ -120,8 +121,8 @@ class TestProductRouter:
                         "title": f"Best Seller {i}",
                         "price": 100.0 + i,
                         "images": None,
-                        "sales_count": 50 + i  # Добавляем количество продаж
-                    }
+                        "sales_count": 50 + i,  # Добавляем количество продаж
+                    },
                 )
                 for i in range(1, 6)
             ]
@@ -129,12 +130,7 @@ class TestProductRouter:
 
             # Делаем запрос с параметрами
             response = await client.get(
-                "/api/v1/products/best-sellers",
-                params={
-                    "skip": 0,
-                    "limit": 10,
-                    "max_items": 5
-                }
+                "/api/v1/products/best-sellers", params={"skip": 0, "limit": 10}
             )
 
             # Проверяем ответ
@@ -160,9 +156,9 @@ class TestProductRouter:
                         "title": f"Discounted Product {i}",
                         "price": 100.0,
                         "old_price": 200.0,
-                        "discount": 20.0 + i*5,  # Скидка от 20% до 30%
-                        "images": None
-                    }
+                        "discount": 20.0 + i * 5,
+                        "images": None,
+                    },
                 )
                 for i in range(1, 4)
             ]
@@ -170,19 +166,16 @@ class TestProductRouter:
 
             response = await client.get(
                 "/api/v1/products/top-discounts",
-                params={
-                    "skip": 0,
-                    "limit": 10,
-                    "min_discount": 20.0,
-                    "max_items": 3
-                }
+                params={"skip": 0, "limit": 10, "min_discount": 20.0},
             )
 
             assert response.status_code == 200
             data = response.json()
             assert data["data"]["total"] == 3
             assert len(data["data"]["items"]) == 3
-            assert data["data"]["items"][0]["discount"] == 25.0  # Первый товар имеет скидку 25%
+            assert (
+                data["data"]["items"][0]["discount"] == 25.0
+            )  # Первый товар имеет скидку 25%
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -198,10 +191,9 @@ class TestProductRouter:
                     {
                         "id": i,
                         "title": f"New Product {i}",
-                        "price": 50.0 + i*10,
+                        "price": 50.0 + i * 10,
                         "images": None,
-                        "created_at": "2023-01-0{i}T00:00:00"  # Недавняя дата создания
-                    }
+                    },
                 )
                 for i in range(1, 5)
             ]
@@ -213,10 +205,8 @@ class TestProductRouter:
                     "skip": 0,
                     "limit": 10,
                     "days_threshold": 30,
-                    "max_items": 4
-                }
+                },
             )
-
 
             assert response.status_code == 200
             data = response.json()

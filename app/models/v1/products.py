@@ -50,9 +50,15 @@ class Product(BaseModel):
     material: Mapped[Optional[str]] = mapped_column(nullable=True, doc="Материал")
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     quantity: Mapped[int] = mapped_column(nullable=False, default=0)
-    sales_count: Mapped[int] = mapped_column(nullable=False, doc="количество проданных товаров")
-    discount: Mapped[int] = mapped_column(nullable=False, doc='скидка на твоар', default=0)
-    new_arrivals: Mapped[bool] = mapped_column(nullable=False, doc='новинка или нет', default=False)
+    sales_count: Mapped[int] = mapped_column(
+        nullable=True, doc="количество проданных товаров"
+    )
+    discount: Mapped[int] = mapped_column(
+        nullable=True, doc="скидка на твоар", default=0
+    )
+    new_arrivals: Mapped[bool] = mapped_column(
+        nullable=True, doc="новинка или нет", default=False
+    )
 
     images: Mapped[Optional[List[str]]] = mapped_column(Text, nullable=True)
 
@@ -62,6 +68,3 @@ class Product(BaseModel):
     items: Mapped[Optional["CartItem"]] = relationship(
         "CartItem", back_populates="product"
     )
-
-
-# TODO расширить характеристики продукта

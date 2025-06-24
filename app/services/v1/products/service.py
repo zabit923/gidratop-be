@@ -165,9 +165,7 @@ class ProductService(BaseService):
         return ProductResponseSchema.model_validate(updated_product)
 
     async def get_best_sellers(
-        self,
-        pagination: PaginationParams,
-        limit: int = 10
+        self, pagination: PaginationParams, limit: int = 10
     ) -> Tuple[List[ProductResponseSchema], int]:
         """
         Получает список самых продаваемых продуктов (хиты продаж).
@@ -179,19 +177,13 @@ class ProductService(BaseService):
         Returns:
             Кортеж (список продуктов, общее количество).
         """
-        products, total = await self.data_manager.get_best_selling_products(
-            pagination,
-            limit
-        )
+        products, total = await self.data_manager.get_best_selling_products(pagination)
         return [
             ProductResponseSchema.model_validate(product) for product in products
         ], total
 
     async def get_top_discounts(
-        self,
-        pagination: PaginationParams,
-        min_discount: float = 10.0,
-        limit: int = 10
+        self, pagination: PaginationParams, min_discount: float = 10.0
     ) -> Tuple[List[ProductResponseSchema], int]:
         """
         Получает список продуктов с самыми большими скидками.
@@ -205,19 +197,14 @@ class ProductService(BaseService):
             Кортеж (список продуктов, общее количество).
         """
         products, total = await self.data_manager.get_products_with_biggest_discounts(
-            pagination,
-            min_discount,
-            limit
+            pagination, min_discount
         )
         return [
             ProductResponseSchema.model_validate(product) for product in products
         ], total
 
     async def get_new_arrivals(
-        self,
-        pagination: PaginationParams,
-        days_threshold: int = 30,
-        limit: int = 10
+        self, pagination: PaginationParams, days_threshold: int = 30
     ) -> Tuple[List[ProductResponseSchema], int]:
         """
         Получает список недавно добавленных продуктов (новинки).
@@ -225,15 +212,12 @@ class ProductService(BaseService):
         Args:
             pagination: Параметры пагинации.
             days_threshold: Максимальный возраст продукта в днях (по умолчанию 30).
-            limit: Максимальное количество продуктов (по умолчанию 10).
 
         Returns:
             Кортеж (список продуктов, общее количество).
         """
         products, total = await self.data_manager.get_recently_added_products(
-            pagination,
-            days_threshold,
-            limit
+            pagination, days_threshold
         )
         return [
             ProductResponseSchema.model_validate(product) for product in products

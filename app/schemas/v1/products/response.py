@@ -37,6 +37,9 @@ class ProductResponseSchema(BaseSchema):
     quantity: int
     images: Optional[List[str]] = None
     category: Optional["CategoryShortResponseSchema"] = None
+    discount: Optional[int] = None
+    sales_count: Optional[int] = None
+    new_arrivals: Optional[bool] = None
 
 
 class ProductListResponseSchema(BaseResponseSchema):

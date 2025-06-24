@@ -83,33 +83,23 @@ class ProductDataManager(BaseEntityManager[ProductDataSchema]):
             )
 
     async def get_best_selling_products(
-        self,
-        pagination: PaginationParams,
-        limit: int = 10
+        self, pagination: PaginationParams
     ) -> tuple[list[Product], int]:
         try:
-            statement = (
-                select(Product)
-                .order_by(Product.sales_count.desc())
-                .limit(limit)
-            )
+            statement = select(Product).order_by(Product.sales_count.desc())
             return await self.get_paginated_items(statement, pagination)
         except SQLAlchemyError as e:
             self.logger.error("Ошибка при получении хитов продаж: %s", str(e))
             raise RuntimeError("Не удалось получить хиты продаж") from e
 
     async def get_products_with_biggest_discounts(
-        self,
-        pagination: PaginationParams,
-        min_discount: float = 10.0,
-        limit: int = 10
+        self, pagination: PaginationParams, min_discount: float = 10.0
     ) -> tuple[list[Product], int]:
         try:
             statement = (
                 select(Product)
                 .where(Product.discount >= min_discount)
                 .order_by(Product.discount.desc())
-                .limit(limit)
             )
             return await self.get_paginated_items(statement, pagination)
         except SQLAlchemyError as e:
@@ -117,20 +107,17 @@ class ProductDataManager(BaseEntityManager[ProductDataSchema]):
             raise RuntimeError("Не удалось получить товары со скидками") from e
 
     async def get_recently_added_products(
-        self,
-        pagination: PaginationParams,
-        days_threshold: int = 30,
-        limit: int = 10
+        self, pagination: PaginationParams, days_threshold: int = 30
     ) -> tuple[list[Product], int]:
         try:
             from datetime import datetime, timedelta
+
             threshold_date = datetime.utcnow() - timedelta(days=days_threshold)
 
             statement = (
                 select(Product)
                 .where(Product.created_at >= threshold_date)
                 .order_by(Product.created_at.desc())
-                .limit(limit)
             )
             return await self.get_paginated_items(statement, pagination)
         except SQLAlchemyError as e:

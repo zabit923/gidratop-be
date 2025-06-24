@@ -20,6 +20,9 @@ class ProductDataSchema(BaseSchema):
         height: Высота продукта в сантиметрах.
         material: Материал продукта.
         quantity: Количество продукта на складе.
+        sales_count: Количество проданных товаров.
+        discount: Скидка на товар в процентах.
+        new_arrivals: Является ли товар новинкой.
         images: Список URL изображений продукта.
     """
 
@@ -64,8 +67,18 @@ class ProductDataSchema(BaseSchema):
     quantity: int = Field(
         default=0, description="Количество продукта на складе", examples=[100, 50, 0]
     )
-    images: Optional[list[str]] = Field(
-        default=None,
-        description="Список URL изображений продукта",
-        examples=["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
+    sales_count: Optional[int] = Field(
+        default=0,
+        description="Количество проданных товаров",
+        examples=[10, 25, 0],
+    )
+    discount: Optional[int] = Field(
+        default=0,
+        description="Скидка на товар в процентах",
+        examples=[10, 20, 0],
+    )
+    new_arrivals: Optional[bool] = Field(
+        default=False,
+        description="Является ли товар новинкой",
+        examples=[True, False],
     )

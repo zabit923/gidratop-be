@@ -78,6 +78,106 @@ class ProductRouter(BaseRouter):
             return ProductListResponseSchema(data=page)
 
         @self.router.get(
+            "/best-sellers",
+            response_model=ProductListResponseSchema,
+            status_code=status.HTTP_200_OK,
+            summary="Получение хитов продаж",
+        )
+        async def get_best_sellers(
+            skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
+            limit: int = Query(
+                10, ge=1, le=100, description="Количество элементов на странице"
+            ),
+            session: AsyncSession = Depends(get_db_session),
+        ) -> ProductListResponseSchema:
+            """
+            ### Args:
+            * **skip**: Количество пропускаемых элементов
+            * **limit**: Количество элементов на странице (от 1 до 100)
+            """
+            pagination = PaginationParams(skip=skip, limit=limit)
+            products, total = await ProductService(session).get_best_sellers(
+                pagination=pagination
+            )
+            page = Page(
+                items=products,
+                total=total,
+                page=pagination.page,
+                size=pagination.limit,
+            )
+            return ProductListResponseSchema(data=page)
+
+        @self.router.get(
+            "/top-discounts",
+            response_model=ProductListResponseSchema,
+            status_code=status.HTTP_200_OK,
+            summary="Получение товаров с максимальными скидками",
+        )
+        async def get_top_discounts(
+            skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
+            limit: int = Query(
+                10, ge=1, le=100, description="Количество элементов на странице"
+            ),
+            min_discount: float = Query(
+                10.0, ge=0, le=100, description="Минимальный размер скидки в процентах"
+            ),
+            session: AsyncSession = Depends(get_db_session),
+        ) -> ProductListResponseSchema:
+            """
+            ### Args:
+            * **skip**: Количество пропускаемых элементов
+            * **limit**: Количество элементов на странице (от 1 до 100)
+            * **min_discount**: Минимальный размер скидки для включения в список (0-100%)
+            """
+            pagination = PaginationParams(skip=skip, limit=limit)
+            products, total = await ProductService(session).get_top_discounts(
+                pagination=pagination,
+                min_discount=min_discount,
+            )
+            page = Page(
+                items=products,
+                total=total,
+                page=pagination.page,
+                size=pagination.limit,
+            )
+            return ProductListResponseSchema(data=page)
+
+        @self.router.get(
+            "/new-arrivals",
+            response_model=ProductListResponseSchema,
+            status_code=status.HTTP_200_OK,
+            summary="Получение новинок",
+        )
+        async def get_new_arrivals(
+            skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
+            limit: int = Query(
+                10, ge=1, le=100, description="Количество элементов на странице"
+            ),
+            days_threshold: int = Query(
+                30, ge=1, description="Максимальный возраст товара в днях"
+            ),
+            session: AsyncSession = Depends(get_db_session),
+        ) -> ProductListResponseSchema:
+            """
+            ### Args:
+            * **skip**: Количество пропускаемых элементов
+            * **limit**: Количество элементов на странице (от 1 до 100)
+            * **days_threshold**: Максимальный возраст товара для включения в список (в днях)
+            """
+            pagination = PaginationParams(skip=skip, limit=limit)
+            products, total = await ProductService(session).get_new_arrivals(
+                pagination=pagination,
+                days_threshold=days_threshold,
+            )
+            page = Page(
+                items=products,
+                total=total,
+                page=pagination.page,
+                size=pagination.limit,
+            )
+            return ProductListResponseSchema(data=page)
+
+        @self.router.get(
             "/{product_id}",
             response_model=ProductResponseSchema,
             status_code=status.HTTP_200_OK,
@@ -135,118 +235,3 @@ class ProductRouter(BaseRouter):
             return await ProductService(session, s3_data_manager).update_product_images(
                 user, product_id, images
             )
-
-        @self.router.get(
-            "/best-sellers",
-            response_model=ProductListResponseSchema,
-            status_code=status.HTTP_200_OK,
-            summary="Получение хитов продаж",
-        )
-        async def get_best_sellers(
-            skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
-            limit: int = Query(
-                10, ge=1, le=100, description="Количество элементов на странице"
-            ),
-            max_items: int = Query(
-                10, ge=1, le=50, description="Максимальное количество хитов продаж"
-            ),
-            session: AsyncSession = Depends(get_db_session),
-        ) -> ProductListResponseSchema:
-            """
-            ### Args:
-            * **skip**: Количество пропускаемых элементов
-            * **limit**: Количество элементов на странице (от 1 до 100)
-            * **max_items**: Максимальное количество возвращаемых хитов продаж (от 1 до 50)
-            """
-            pagination = PaginationParams(skip=skip, limit=limit)
-            products, total = await ProductService(session).get_best_sellers(
-                pagination=pagination,
-                limit=max_items,
-            )
-            page = Page(
-                items=products,
-                total=total,
-                page=pagination.page,
-                size=pagination.limit,
-            )
-            return ProductListResponseSchema(data=page)
-
-        @self.router.get(
-            "/top-discounts",
-            response_model=ProductListResponseSchema,
-            status_code=status.HTTP_200_OK,
-            summary="Получение товаров с максимальными скидками",
-        )
-        async def get_top_discounts(
-            skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
-            limit: int = Query(
-                10, ge=1, le=100, description="Количество элементов на странице"
-            ),
-            min_discount: float = Query(
-                10.0, ge=0, le=100, description="Минимальный размер скидки в процентах"
-            ),
-            max_items: int = Query(
-                10, ge=1, le=50, description="Максимальное количество товаров"
-            ),
-            session: AsyncSession = Depends(get_db_session),
-        ) -> ProductListResponseSchema:
-            """
-            ### Args:
-            * **skip**: Количество пропускаемых элементов
-            * **limit**: Количество элементов на странице (от 1 до 100)
-            * **min_discount**: Минимальный размер скидки для включения в список (0-100%)
-            * **max_items**: Максимальное количество возвращаемых товаров (от 1 до 50)
-            """
-            pagination = PaginationParams(skip=skip, limit=limit)
-            products, total = await ProductService(session).get_top_discounts(
-                pagination=pagination,
-                min_discount=min_discount,
-                limit=max_items,
-            )
-            page = Page(
-                items=products,
-                total=total,
-                page=pagination.page,
-                size=pagination.limit,
-            )
-            return ProductListResponseSchema(data=page)
-
-        @self.router.get(
-            "/new-arrivals",
-            response_model=ProductListResponseSchema,
-            status_code=status.HTTP_200_OK,
-            summary="Получение новинок",
-        )
-        async def get_new_arrivals(
-            skip: int = Query(0, ge=0, description="Количество пропускаемых элементов"),
-            limit: int = Query(
-                10, ge=1, le=100, description="Количество элементов на странице"
-            ),
-            days_threshold: int = Query(
-                30, ge=1, description="Максимальный возраст товара в днях"
-            ),
-            max_items: int = Query(
-                10, ge=1, le=50, description="Максимальное количество новинок"
-            ),
-            session: AsyncSession = Depends(get_db_session),
-        ) -> ProductListResponseSchema:
-            """
-            ### Args:
-            * **skip**: Количество пропускаемых элементов
-            * **limit**: Количество элементов на странице (от 1 до 100)
-            * **days_threshold**: Максимальный возраст товара для включения в список (в днях)
-            * **max_items**: Максимальное количество возвращаемых новинок (от 1 до 50)
-            """
-            pagination = PaginationParams(skip=skip, limit=limit)
-            products, total = await ProductService(session).get_new_arrivals(
-                pagination=pagination,
-                days_threshold=days_threshold,
-                limit=max_items,
-            )
-            page = Page(
-                items=products,
-                total=total,
-                page=pagination.page,
-                size=pagination.limit,
-            )
-            return ProductListResponseSchema(data=page)
