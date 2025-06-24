@@ -5,9 +5,15 @@
 с использованием глобальной фабрики сессий для оптимальной производительности.
 """
 
+from typing import AsyncGenerator
+
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
-                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.core.connections import BaseClient
 from app.core.settings import Config, settings
@@ -90,3 +96,55 @@ class DatabaseClient(BaseClient):
                 "Вызовите connect() перед использованием."
             )
         return self._session_factory
+
+    def get_engine(self) -> AsyncEngine:
+        """
+        Получение текущего движка базы данных.
+
+        Returns:
+            AsyncEngine: асинхронный движок SQLAlchemy
+
+        Raises:
+            RuntimeError: если движок еще не инициализирован (connect не вызывался)
+        """
+        self._engine = create_async_engine(
+            url=self._config.database_url, **self._config.engine_params
+        )
+
+        if self._engine is None:
+            raise RuntimeError(
+                "База данных не инициализирована. "
+                "Вызовите connect() перед использованием."
+            )
+        return self._engine
+
+
+# Глобальный экземпляр клиента
+database_client = DatabaseClient()
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Dependency для получения сессии базы данных в FastAPI.
+
+    Yields:
+        AsyncSession: Асинхронная сессия SQLAlchemy
+
+    Usage:
+        ```python
+        @router.post("/users/")
+        async def create_user(
+            user_data: UserCreate,
+            session: AsyncSession = Depends(get_db_session)
+        ):
+            # Работа с сессией
+        ```
+    """
+    session_factory = database_client.get_session_factory()
+
+    async with session_factory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

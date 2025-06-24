@@ -24,27 +24,35 @@
 - create_database() -> Создание БД если не существует
 - get_postgres_container_name() -> Поиск контейнера PostgreSQL
 """
+import asyncio
 import os
+import platform
+import socket
 import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 from typing import Optional
-import time
-import socket
-import platform
-import uvicorn
-import threading
-import sys
-import asyncio
+
 import asyncpg
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
+import uvicorn
+
+from app.core.dependencies import database_client, get_db_session
+from app.core.security.password import pwd_context
+from app.models import UserModel, UserRole
+
 
 class DockerDaemonNotRunningError(Exception):
     """
     Исключение, возникающее когда Docker демон не запущен или недоступен.
     """
+
     def __init__(self, message=None):
-        self.message = message or "Docker демон не запущен. Убедись, что Docker Desktop запущен и работает."
+        self.message = (
+            message
+            or "Docker демон не запущен. Убедись, что Docker Desktop запущен и работает."
+        )
         super().__init__(self.message)
 
 
@@ -52,29 +60,38 @@ class DockerContainerConflictError(Exception):
     """
     Исключение, возникающее при конфликте имен контейнеров Docker.
     """
+
     def __init__(self, container_name=None, message=None):
         if container_name:
-            self.message = message or f"Конфликт имен контейнеров. Контейнер '{container_name}' уже используется. Удали его или переименуй."
+            self.message = (
+                message
+                or f"Конфликт имен контейнеров. Контейнер '{container_name}' уже используется. Удали его или переименуй."
+            )
         else:
-            self.message = message or "Конфликт имен контейнеров. Удали существующий контейнер или переименуй его."
+            self.message = (
+                message
+                or "Конфликт имен контейнеров. Удали существующий контейнер или переименуй его."
+            )
         super().__init__(self.message)
 
+
 TEST_ENV_FILE = ".env.test"
-DEV_ENV_FILE=".env.dev"
+DEV_ENV_FILE = ".env.dev"
 # Получаем путь к корню проекта
 ROOT_DIR = Path(__file__).parents[1]
 
 COMPOSE_FILE_WITHOUT_BACKEND = "docker-compose.dev.yml"
 
 DEFAULT_PORTS = {
-    'FASTAPI': 8000,
-    'RABBITMQ': 5672,      # Порт для AMQP
-    'RABBITMQ_UI': 15672,  # Порт для веб-интерфейса
-    'POSTGRES': 5432,
-    'REDIS': 6379,
-    'PGADMIN': 5050,
-    'REDIS_COMMANDER': 8081,
+    "FASTAPI": 8000,
+    "RABBITMQ": 5672,  # Порт для AMQP
+    "RABBITMQ_UI": 15672,  # Порт для веб-интерфейса
+    "POSTGRES": 5432,
+    "REDIS": 6379,
+    "PGADMIN": 5050,
+    "REDIS_COMMANDER": 8081,
 }
+
 
 def load_env_vars(env_file_path: str = None) -> dict:
     """
@@ -88,7 +105,6 @@ def load_env_vars(env_file_path: str = None) -> dict:
         # Для тестов используем .env.test, если есть, иначе .env.dev
         dev_env_path = ROOT_DIR / DEV_ENV_FILE
         test_env_path = ROOT_DIR / TEST_ENV_FILE
-
 
         if dev_env_path.exists():
             env_file_path = str(dev_env_path)
@@ -104,11 +120,11 @@ def load_env_vars(env_file_path: str = None) -> dict:
     if os.path.exists(env_file_path):
         with open(env_file_path, encoding="utf-8") as f:
             for line in f:
-                if line.strip() and not line.startswith('#'):
+                if line.strip() and not line.startswith("#"):
                     try:
-                        key, value = line.strip().split('=', 1)
+                        key, value = line.strip().split("=", 1)
                         # Убираем кавычки если есть
-                        value = value.strip('"\'')
+                        value = value.strip("\"'")
                         env_vars[key] = value
                     except ValueError:
                         # Пропускаем некорректные строки
@@ -118,7 +134,12 @@ def load_env_vars(env_file_path: str = None) -> dict:
 
     return env_vars
 
-def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WITHOUT_BACKEND, env: dict = None) -> None:
+
+def run_compose_command(
+    command: str | list,
+    compose_file: str = COMPOSE_FILE_WITHOUT_BACKEND,
+    env: dict = None,
+) -> None:
     """
     Запускает docker-compose команду в корне проекта
 
@@ -149,7 +170,9 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
     if not os.path.exists(env_path):
         print(f"❌ Файл {DEV_ENV_FILE} не найден в директории {ROOT_DIR}")
         print("💡 Создайте файл .env.dev с необходимыми переменными окружения")
-        raise FileNotFoundError(f"❌ Файл {DEV_ENV_FILE} не найден. Создайте его перед запуском.")
+        raise FileNotFoundError(
+            f"❌ Файл {DEV_ENV_FILE} не найден. Создайте его перед запуском."
+        )
 
     # Обновляем переменные окружения
     environment = os.environ.copy()
@@ -167,18 +190,26 @@ def run_compose_command(command: str | list, compose_file: str = COMPOSE_FILE_WI
             check=True,
             env=environment,
             # capture_output=not show_output,
-            text=True
+            text=True,
         )
     except subprocess.CalledProcessError as e:
         error_output = e.stderr or e.stdout or str(e)
-        if "docker daemon is not running" in error_output or "pipe/docker_engine" in error_output:
+        if (
+            "docker daemon is not running" in error_output
+            or "pipe/docker_engine" in error_output
+        ):
             raise DockerDaemonNotRunningError() from e
-        elif "Conflict" in error_output and "is already in use by container" in error_output:
+        elif (
+            "Conflict" in error_output
+            and "is already in use by container" in error_output
+        ):
             import re
+
             container_match = re.search(r'The container name "([^"]+)"', error_output)
             container_name = container_match.group(1) if container_match else None
             raise DockerContainerConflictError(container_name) from e
         raise
+
 
 def find_free_port(start_port: int = 8000) -> int:
     """
@@ -200,11 +231,12 @@ def find_free_port(start_port: int = 8000) -> int:
     while port < 65535:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('', port))
+                s.bind(("", port))
                 return port
         except OSError:
             port += 1
     raise RuntimeError("Нет свободных портов! Ахуеть!")
+
 
 def get_available_port(default_port: int) -> int:
     """
@@ -226,11 +258,12 @@ def get_available_port(default_port: int) -> int:
     while port < 65535:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('', port))
+                s.bind(("", port))
                 return port
         except OSError:
             port += 1
     raise RuntimeError(f"Не могу найти свободный порт после {default_port}")
+
 
 def is_port_free(port: int) -> bool:
     """
@@ -247,10 +280,11 @@ def is_port_free(port: int) -> bool:
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('', port))
+            s.bind(("", port))
             return True
     except OSError:
         return False
+
 
 def get_port(service: str) -> int:
     """
@@ -268,8 +302,9 @@ def get_port(service: str) -> int:
     Note:
         Убирает '_PORT' из имени и приводит к верхнему регистру
     """
-    service_upper = service.upper().replace('_PORT', '')
+    service_upper = service.upper().replace("_PORT", "")
     return int(os.getenv(service, DEFAULT_PORTS[service_upper]))
+
 
 def show_loader(message: str, stop_event: threading.Event):
     """
@@ -282,12 +317,13 @@ def show_loader(message: str, stop_event: threading.Event):
     chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
     i = 0
     while not stop_event.is_set():
-        sys.stdout.write(f'\r{chars[i % len(chars)]} {message}')
+        sys.stdout.write(f"\r{chars[i % len(chars)]} {message}")
         sys.stdout.flush()
         time.sleep(0.1)
         i += 1
-    sys.stdout.write('\r' + ' ' * (len(message) + 2) + '\r')
+    sys.stdout.write("\r" + " " * (len(message) + 2) + "\r")
     sys.stdout.flush()
+
 
 def check_service(name: str, port: int, retries: int = 10, delay: int = 3) -> bool:
     """
@@ -308,13 +344,14 @@ def check_service(name: str, port: int, retries: int = 10, delay: int = 3) -> bo
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     for _ in range(retries):
         try:
-            sock.connect(('localhost', port))
+            sock.connect(("localhost", port))
             sock.close()
             return True
         except:
             print(f"⏳ Ждём {name} на порту {port}...")
             time.sleep(delay)
     return False
+
 
 def check_services():
     """
@@ -331,9 +368,9 @@ def check_services():
         PostgreSQL получает 30 попыток, остальные по 5
     """
     services_config = {
-        'Redis': ('REDIS_PORT', 5),
-        'RabbitMQ': ('RABBITMQ_UI_PORT', 20),
-        'PostgreSQL': ('POSTGRES_PORT', 30),
+        "Redis": ("REDIS_PORT", 5),
+        "RabbitMQ": ("RABBITMQ_UI_PORT", 20),
+        "PostgreSQL": ("POSTGRES_PORT", 30),
     }
 
     for service_name, (port_key, retries) in services_config.items():
@@ -342,6 +379,7 @@ def check_services():
             print(f"❌ {service_name} не доступен на порту {port}!")
             return False
     return True
+
 
 def get_postgres_container_name() -> str:
     """
@@ -360,9 +398,7 @@ def get_postgres_container_name() -> str:
     try:
         # Проверяем, доступен ли Docker
         which_result = subprocess.run(
-            ["which", "docker"],
-            capture_output=True,
-            text=True
+            ["which", "docker"], capture_output=True, text=True
         )
         if which_result.returncode != 0:
             print("ℹ️ Docker не найден, используем прямое подключение к PostgreSQL")
@@ -372,11 +408,13 @@ def get_postgres_container_name() -> str:
             ["docker", "ps", "--filter", "name=postgres", "--format", "{{.Names}}"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
-        containers = [name for name in result.stdout.strip().split('\n') if name]
+        containers = [name for name in result.stdout.strip().split("\n") if name]
         if not containers:
-            print("⚠️ Контейнер PostgreSQL не найден через Docker, используем прямое подключение")
+            print(
+                "⚠️ Контейнер PostgreSQL не найден через Docker, используем прямое подключение"
+            )
             return "postgres"
         return containers[0]  # Берем первый найденный контейнер
     except subprocess.CalledProcessError as e:
@@ -385,6 +423,7 @@ def get_postgres_container_name() -> str:
     except Exception as e:
         print(f"⚠️ Непредвиденная ошибка: {e}")
         return "postgres"
+
 
 def create_database():
     """
@@ -413,11 +452,11 @@ def create_database():
     print(f"🔍 Используем PostgreSQL: {postgres_container}")
 
     # Извлекаем настройки БД
-    user = db_config.get('POSTGRES_USER', 'postgres')
-    password = db_config.get('POSTGRES_PASSWORD', '')
-    host = db_config.get('POSTGRES_HOST', 'localhost')
-    port = db_config.get('POSTGRES_PORT', '5432')
-    db_name = db_config.get('POSTGRES_DB', 'aichat_db')
+    user = db_config.get("POSTGRES_USER", "postgres")
+    password = db_config.get("POSTGRES_PASSWORD", "")
+    host = db_config.get("POSTGRES_HOST", "localhost")
+    port = db_config.get("POSTGRES_PORT", "5432")
+    db_name = db_config.get("POSTGRES_DB", "aichat_db")
 
     try:
         # Проверяем, доступен ли Docker
@@ -427,16 +466,35 @@ def create_database():
         if docker_available:
             # Метод с использованием Docker
             check_db_inside = subprocess.run(
-                ["docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
-                f"SELECT 1 FROM pg_database WHERE datname = '{db_name}';"],
-                capture_output=True, text=True
+                [
+                    "docker",
+                    "exec",
+                    "-i",
+                    postgres_container,
+                    "psql",
+                    "-U",
+                    user,
+                    "-c",
+                    f"SELECT 1 FROM pg_database WHERE datname = '{db_name}';",
+                ],
+                capture_output=True,
+                text=True,
             )
 
             if "1 row" not in check_db_inside.stdout:
-                print(f"🛠️ База данных {db_name} не найдена внутри контейнера, создаём...")
+                print(
+                    f"🛠️ База данных {db_name} не найдена внутри контейнера, создаём..."
+                )
                 create_cmd = [
-                    "docker", "exec", "-i", postgres_container, "psql", "-U", user, "-c",
-                    f"CREATE DATABASE {db_name};"
+                    "docker",
+                    "exec",
+                    "-i",
+                    postgres_container,
+                    "psql",
+                    "-U",
+                    user,
+                    "-c",
+                    f"CREATE DATABASE {db_name};",
                 ]
                 subprocess.run(create_cmd, check=True)
                 print(f"✅ База данных {db_name} создана внутри контейнера!")
@@ -458,12 +516,15 @@ def create_database():
             # Проверяем существование БД
             check_db = subprocess.run(
                 f"{psql_command} -c \"SELECT 1 FROM pg_database WHERE datname = '{db_name}';\"",
-                shell=True, env=env, capture_output=True, text=True
+                shell=True,
+                env=env,
+                capture_output=True,
+                text=True,
             )
 
             if "1 row" not in check_db.stdout:
                 print(f"🛠️ База данных {db_name} не найдена, создаём...")
-                create_cmd = f"{psql_command} -c \"CREATE DATABASE {db_name};\""
+                create_cmd = f'{psql_command} -c "CREATE DATABASE {db_name};"'
                 subprocess.run(create_cmd, shell=True, env=env, check=True)
                 print(f"✅ База данных {db_name} создана!")
             else:
@@ -523,16 +584,15 @@ def start_infrastructure():
         # Проверяем статус Docker
         try:
             docker_info = subprocess.run(
-                ["docker", "info"],
-                capture_output=True,
-                text=True,
-                check=True
+                ["docker", "info"], capture_output=True, text=True, check=True
             )
             print("✅ Docker запущен и работает")
         except subprocess.CalledProcessError as e:
             print("❌ Проблема с Docker:")
             if "permission denied" in str(e.stderr).lower():
-                print("💡 Нет прав доступа к Docker. Попробуйте запустить от администратора.")
+                print(
+                    "💡 Нет прав доступа к Docker. Попробуйте запустить от администратора."
+                )
             elif "cannot connect to the docker daemon" in str(e.stderr).lower():
                 print("💡 Docker Daemon не отвечает. Проверьте что:")
                 print("   1. Docker Desktop точно запущен")
@@ -546,11 +606,11 @@ def start_infrastructure():
             ["docker", "ps", "--format", "{{.Names}}"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         if ps_result.stdout.strip():
             print("⚠️ Найдены запущенные контейнеры:")
-            for container in ps_result.stdout.strip().split('\n'):
+            for container in ps_result.stdout.strip().split("\n"):
                 print(f"   - {container}")
 
         # Убиваем все контейнеры
@@ -558,7 +618,10 @@ def start_infrastructure():
             run_compose_command("down --remove-orphans")
         except subprocess.CalledProcessError as e:
             error_output = str(e)
-            if "docker daemon is not running" in error_output or "pipe/docker_engine" in error_output:
+            if (
+                "docker daemon is not running" in error_output
+                or "pipe/docker_engine" in error_output
+            ):
                 raise DockerDaemonNotRunningError()
             raise
 
@@ -567,7 +630,10 @@ def start_infrastructure():
             subprocess.run(["docker", "volume", "prune", "-f"], check=True)
         except subprocess.CalledProcessError as e:
             error_output = str(e)
-            if "docker daemon is not running" in error_output or "pipe/docker_engine" in error_output:
+            if (
+                "docker daemon is not running" in error_output
+                or "pipe/docker_engine" in error_output
+            ):
                 raise DockerDaemonNotRunningError()
             raise
 
@@ -578,10 +644,7 @@ def start_infrastructure():
         }
 
         # Используем порты в docker-compose через переменные окружения
-        env = {
-            f"{service}_PORT": str(port)
-            for service, port in ports.items()
-        }
+        env = {f"{service}_PORT": str(port) for service, port in ports.items()}
         # Запуск контейнеров с loader
         stop_loader = threading.Event()
         loader_thread = threading.Thread(target=show_loader, args=("", stop_loader))
@@ -591,12 +654,21 @@ def start_infrastructure():
             run_compose_command(["up", "-d"], COMPOSE_FILE_WITHOUT_BACKEND, env=env)
         except subprocess.CalledProcessError as e:
             error_output = str(e)
-            if "docker daemon is not running" in error_output or "pipe/docker_engine" in error_output:
+            if (
+                "docker daemon is not running" in error_output
+                or "pipe/docker_engine" in error_output
+            ):
                 raise DockerDaemonNotRunningError()
-            elif "Conflict" in error_output and "is already in use by container" in error_output:
+            elif (
+                "Conflict" in error_output
+                and "is already in use by container" in error_output
+            ):
                 # Извлекаем имя контейнера из сообщения об ошибке
                 import re
-                container_match = re.search(r'The container name "([^"]+)"', error_output)
+
+                container_match = re.search(
+                    r'The container name "([^"]+)"', error_output
+                )
                 container_name = container_match.group(1) if container_match else None
                 raise DockerContainerConflictError(container_name)
             raise
@@ -613,9 +685,9 @@ def start_infrastructure():
         migrate()
         print("✅ Миграции выполнены!")
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎯 ИНФРАСТРУКТУРА ГОТОВА")
-        print("="*60)
+        print("=" * 60)
 
         print("\n📡 СЕРВИСЫ:")
         print(f"📊 FastAPI Swagger:    http://localhost:{ports['FASTAPI']}/docs")
@@ -628,9 +700,15 @@ def start_infrastructure():
         print(f"📊 Redis Commander:    http://localhost:{ports['REDIS_COMMANDER']}")
 
         print("\n🔑 ДОСТУПЫ:")
-        print(f"🔍 PgAdmin:           {env_vars.get('PGADMIN_DEFAULT_EMAIL', 'admin@admin.com')} / {env_vars.get('PGADMIN_DEFAULT_PASSWORD', 'admin')}")
-        print(f"🐰 RabbitMQ:          {env_vars.get('RABBITMQ_USER', 'guest')} / {env_vars.get('RABBITMQ_PASS', 'guest')}")
-        print(f"🗄️ PostgreSQL:        {env_vars.get('POSTGRES_USER', 'postgres')} / {env_vars.get('POSTGRES_PASSWORD', 'postgres')}")
+        print(
+            f"🔍 PgAdmin:           {env_vars.get('PGADMIN_DEFAULT_EMAIL', 'admin@admin.com')} / {env_vars.get('PGADMIN_DEFAULT_PASSWORD', 'admin')}"
+        )
+        print(
+            f"🐰 RabbitMQ:          {env_vars.get('RABBITMQ_USER', 'guest')} / {env_vars.get('RABBITMQ_PASS', 'guest')}"
+        )
+        print(
+            f"🗄️ PostgreSQL:        {env_vars.get('POSTGRES_USER', 'postgres')} / {env_vars.get('POSTGRES_PASSWORD', 'postgres')}"
+        )
 
         return True
     except DockerDaemonNotRunningError as e:
@@ -647,6 +725,7 @@ def start_infrastructure():
     except Exception as e:
         print(f"❌ Ошибка при запуске инфраструктуры: {e}")
         return False
+
 
 def setup():
     """
@@ -667,6 +746,7 @@ def setup():
     else:
         subprocess.run(["bash", "scripts/setup.sh"], check=True)
 
+
 def activate():
     """
     Активация виртуального окружения через системные скрипты.
@@ -684,6 +764,7 @@ def activate():
         subprocess.run(["powershell", "-File", "scripts/activate.ps1"], check=True)
     else:
         subprocess.run(["bash", "scripts/activate.sh"], check=True)
+
 
 def dev(port: Optional[int] = None):
     """
@@ -709,14 +790,13 @@ def dev(port: Optional[int] = None):
     if port is None:
         port = find_free_port()
 
-
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🚀 ЗАПУСК FASTAPI СЕРВЕРА")
-    print("="*60)
+    print("=" * 60)
     print(f"🌐 Адрес: http://localhost:{port}")
     print(f"📚 Документация: http://localhost:{port}/docs")
     print(f"🔄 Hot Reload: включён")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     uvicorn.run(
         "app.main:app",
@@ -724,8 +804,9 @@ def dev(port: Optional[int] = None):
         port=port,
         reload=True,
         log_level="debug",
-        access_log=False
+        access_log=False,
     )
+
 
 def serve(port: Optional[int] = None):
     """
@@ -743,14 +824,20 @@ def serve(port: Optional[int] = None):
         port = find_free_port()
 
     print(f"🚀 Запускаем сервер на порту {port}")
-    subprocess.run([
-        "uvicorn",
-        "app.main:app",
-        "--host", "0.0.0.0",
-        "--port", str(port),
-        "--proxy-headers",
-        "--forwarded-allow-ips=*"
-    ], check=True)
+    subprocess.run(
+        [
+            "uvicorn",
+            "app.main:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            str(port),
+            "--proxy-headers",
+            "--forwarded-allow-ips=*",
+        ],
+        check=True,
+    )
+
 
 def migrate():
     """
@@ -768,6 +855,7 @@ def migrate():
     """
     subprocess.run(["alembic", "upgrade", "head"], check=True)
 
+
 def format():
     """
     Автоматическое форматирование кода.
@@ -784,6 +872,7 @@ def format():
     """
     subprocess.run(["black", "app/"], check=True)
     subprocess.run(["isort", "app/"], check=True)
+
 
 def check():
     """
@@ -806,19 +895,16 @@ def check():
     # Проверка mypy
     try:
         mypy_result = subprocess.run(
-            ["mypy", "app/"],
-            capture_output=True,
-            text=True,
-            check=True
+            ["mypy", "app/"], capture_output=True, text=True, check=True
         )
-        mypy_errors = mypy_result.stdout.split('\n')
+        mypy_errors = mypy_result.stdout.split("\n")
 
         mypy_error_groups = {
-            'error: Incompatible': 'Несовместимые типы',
-            'error: Name': 'Ошибки именования',
-            'error: Missing': 'Отсутствующие типы',
-            'error: Argument': 'Ошибки аргументов',
-            'error: Return': 'Ошибки возвращаемых значений'
+            "error: Incompatible": "Несовместимые типы",
+            "error: Name": "Ошибки именования",
+            "error: Missing": "Отсутствующие типы",
+            "error: Argument": "Ошибки аргументов",
+            "error: Return": "Ошибки возвращаемых значений",
         }
 
         # Сначала собираем все ошибки в известные группы
@@ -845,20 +931,17 @@ def check():
     # Проверка flake8
     try:
         result = subprocess.run(
-            ["flake8", "app/"],
-            capture_output=True,
-            text=True,
-            check=True
+            ["flake8", "app/"], capture_output=True, text=True, check=True
         )
-        flake8_errors = result.stdout.split('\n')
+        flake8_errors = result.stdout.split("\n")
 
         # Группируем ошибки по типу
         error_groups = {
-            'E501': 'Длинные строки',
-            'F821': 'Неопределенные переменные',
-            'F841': 'Неиспользуемые переменные',
-            'W605': 'Некорректные escape-последовательности',
-            'E262': 'Неправильные комментарии'
+            "E501": "Длинные строки",
+            "F821": "Неопределенные переменные",
+            "F841": "Неиспользуемые переменные",
+            "W605": "Некорректные escape-последовательности",
+            "E262": "Неправильные комментарии",
         }
 
         # Собираем известные ошибки
@@ -885,6 +968,38 @@ def check():
 
     return mypy_success and flake8_success
 
+
+async def create_superuser():
+    await database_client.connect()
+
+    session_gen = get_db_session()
+    session = await anext(session_gen)
+    try:
+        username = input("Enter username: ")
+        email = input("Enter email: ")
+        password = input("Enter password: ")
+
+        hashed_password = pwd_context.hash(password)
+
+        superuser = UserModel(
+            username=username,
+            email=email,
+            hashed_password=hashed_password,
+            is_verified=True,
+            role=UserRole.ADMIN,
+        )
+        session.add(superuser)
+        await session.commit()
+        print(f"✅ Superuser '{username}' успешно создан!")
+    finally:
+        await session_gen.aclose()
+        await database_client.close()
+
+
+def run_create_superuser():
+    asyncio.run(create_superuser())
+
+
 def lint():
     """
     Полный цикл линтинга: форматирование + проверка.
@@ -898,11 +1013,12 @@ def lint():
     format()
     check()
 
+
 def test(
     path: str = "tests/",
     marker: str = None,
     verbose: bool = True,
-    output_file: str = None
+    output_file: str = None,
 ):
     """
     Запуск тестов с фильтрацией.
@@ -937,11 +1053,14 @@ def test(
     try:
         if output_file:
             with open(output_file, "w") as f:
-                subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT, check=True)
+                subprocess.run(
+                    cmd, env=env, stdout=f, stderr=subprocess.STDOUT, check=True
+                )
         else:
             subprocess.run(cmd, env=env, check=True)
     except subprocess.CalledProcessError:
         pass
+
 
 # def create_test_database():
 #     """
@@ -1033,10 +1152,6 @@ def test(
 #         print(f"❌ Ошибка при создании тестовой базы данных: {e}")
 #         return False
 
-import asyncio
-import asyncpg
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
 
 async def create_test_database_async():
     """
@@ -1050,11 +1165,11 @@ async def create_test_database_async():
         print("❌ Не удалось загрузить конфигурацию БД")
         return False
 
-    user = db_config.get('POSTGRES_USER', 'postgres')
-    password = db_config.get('POSTGRES_PASSWORD', '')
-    host = db_config.get('POSTGRES_HOST', 'localhost')
-    port = int(db_config.get('POSTGRES_PORT', '5432'))
-    db_name = db_config.get('POSTGRES_DB', 'gidrator_db')
+    user = db_config.get("POSTGRES_USER", "postgres")
+    password = db_config.get("POSTGRES_PASSWORD", "")
+    host = db_config.get("POSTGRES_HOST", "localhost")
+    port = int(db_config.get("POSTGRES_PORT", "5432"))
+    db_name = db_config.get("POSTGRES_DB", "gidrator_db")
     test_db_name = f"{db_name}_test"
 
     print(f"🔍 Подключение к {host}:{port} как {user}")
@@ -1066,7 +1181,7 @@ async def create_test_database_async():
             password=password,
             host=host,
             port=port,
-            database='postgres'  # Подключаемся к системной БД
+            database="postgres",  # Подключаемся к системной БД
         )
 
         # Удаляем существующую тестовую БД если есть
@@ -1088,9 +1203,11 @@ async def create_test_database_async():
         print(f"❌ Ошибка при создании тестовой базы данных: {e}")
         return False
 
+
 def create_test_database():
     """Синхронная обертка для асинхронной функции"""
     return asyncio.run(create_test_database_async())
+
 
 def start_all():
     """

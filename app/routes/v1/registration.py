@@ -18,8 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db_session, get_redis_client
 from app.routes.base import BaseRouter
-from app.schemas import (RegistrationRequestSchema, RegistrationResponseSchema,
-                         UserCreationResponseSchema, UserExistsResponseSchema)
+from app.schemas import (
+    RegistrationRequestSchema,
+    RegistrationResponseSchema,
+    UserCreationResponseSchema,
+    UserExistsResponseSchema,
+)
 from app.services.v1.registration.service import RegisterService
 
 

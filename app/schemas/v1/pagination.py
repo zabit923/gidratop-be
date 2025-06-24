@@ -222,8 +222,6 @@ class SortFields(BaseSortFields):
         fields = SortFields.get_field_values()  # ['created_at', 'updated_at']
     """
 
-    pass
-
 
 class UserSortFields(BaseSortFields):
     """

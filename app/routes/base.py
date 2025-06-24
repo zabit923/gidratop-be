@@ -26,7 +26,6 @@ class BaseRouter:
 
     def configure(self):
         """Переопределяется в дочерних классах для настройки роутов"""
-        pass
 
     def get_router(self) -> APIRouter:
         """

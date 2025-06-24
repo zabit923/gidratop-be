@@ -3,7 +3,6 @@
 """
 
 import secrets
-from typing import Optional
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -8,7 +8,6 @@ Classes:
     RegisterService: Основной сервис для регистрации пользователей
 """
 
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -16,22 +15,25 @@ from fastapi import Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import (TokenExpiredError, TokenInvalidError,
-                                 UserNotFoundError)
+from app.core.exceptions import TokenExpiredError, TokenInvalidError, UserNotFoundError
 from app.core.integrations.cache.auth import AuthRedisDataManager
 from app.core.integrations.mail import AuthEmailDataManager
 from app.core.security.cookies import CookieManager
 from app.core.security.token import TokenManager
 from app.core.settings import settings
 from app.models import UserModel
-from app.schemas import (RegistrationDataSchema, RegistrationRequestSchema,
-                         RegistrationResponseSchema,
-                         ResendVerificationDataSchema,
-                         ResendVerificationResponseSchema,
-                         UserCredentialsSchema, VerificationDataSchema,
-                         VerificationResponseSchema,
-                         VerificationStatusDataSchema,
-                         VerificationStatusResponseSchema)
+from app.schemas import (
+    RegistrationDataSchema,
+    RegistrationRequestSchema,
+    RegistrationResponseSchema,
+    ResendVerificationDataSchema,
+    ResendVerificationResponseSchema,
+    UserCredentialsSchema,
+    VerificationDataSchema,
+    VerificationResponseSchema,
+    VerificationStatusDataSchema,
+    VerificationStatusResponseSchema,
+)
 from app.services.v1.base import BaseService
 
 from .data_manager import RegisterDataManager

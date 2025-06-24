@@ -7,8 +7,12 @@
 
 from app.schemas.v1.base import BaseResponseSchema
 
-from .base import (LogoutDataSchema, PasswordResetConfirmDataSchema,
-                   PasswordResetDataSchema, TokenDataSchema)
+from .base import (
+    LogoutDataSchema,
+    PasswordResetConfirmDataSchema,
+    PasswordResetDataSchema,
+    TokenDataSchema,
+)
 
 
 class TokenResponseSchema(BaseResponseSchema):

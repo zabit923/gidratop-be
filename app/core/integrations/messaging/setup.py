@@ -7,7 +7,6 @@ import logging
 from fastapi import FastAPI
 
 # Импортируем обработчики, чтобы они зарегистрировались
-from . import consumers
 
 logger = logging.getLogger(__name__)
 

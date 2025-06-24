@@ -1,6 +1,5 @@
 # Codespace
 .devcontainer
-.github
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -182,3 +181,4 @@ cython_debug/
 .vscode/
 # PyPI configuration file
 .pypirc
+.env.dev

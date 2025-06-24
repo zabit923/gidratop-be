@@ -10,7 +10,9 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
+from admin.config import admin
 from app.core.exceptions.handlers import register_exception_handlers
 from app.core.integrations.messaging.setup import setup_messaging
 from app.core.logging import setup_logging
@@ -37,6 +39,8 @@ def create_application() -> FastAPI:
     app.add_middleware(ActivityMiddleware)
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(RateLimitMiddleware, **settings.rate_limit_params)
+    app.add_middleware(SessionMiddleware, secret_key=settings.TOKEN_SECRET_KEY)
+
     app.add_middleware(CORSMiddleware, **settings.cors_params)
 
     app.include_router(MainRouter().get_router())
@@ -46,6 +50,7 @@ def create_application() -> FastAPI:
     app.include_router(v1_router.get_router(), prefix="/api/v1")
 
     setup_messaging(app)
+    admin.mount_to(app)
 
     return app
 

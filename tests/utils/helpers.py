@@ -1,34 +1,43 @@
 """Утилиты для тестов."""
-from decimal import Decimal
-from datetime import datetime
-import uuid
+import decimal
 import random
 import string
-from typing import Dict, Any, List
+import uuid
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
+from typing import Any, Dict, List, Type, TypeVar, get_type_hints
+
 from httpx import AsyncClient
+
 from app.models import UserRole
 from app.schemas.v1.users.base import UserSchema
 
+T = TypeVar("T")
 
 
 def create_test_user_data() -> Dict[str, Any]:
     """Создает тестовые данные пользователя."""
-    unique_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    unique_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
     return {
         "username": f"testuser_{unique_suffix}",
         "email": f"test_{unique_suffix}@example.com",
         "password": "SecurePass123!",
-        "phone": f"+7 (999) {random.randint(100, 999)}-{random.randint(10, 99)}-{random.randint(10, 99)}"
+        "phone": f"+7 (999) {random.randint(100, 999)}-{random.randint(10, 99)}-{random.randint(10, 99)}",
     }
 
 
-def assert_response_structure(response_data: Dict[str, Any], required_fields: List[str]):
+def assert_response_structure(
+    response_data: Dict[str, Any], required_fields: List[str]
+):
     """Проверяет структуру ответа API."""
     for field in required_fields:
         assert field in response_data, f"Поле '{field}' отсутствует в ответе"
 
 
-async def create_authenticated_client(client: AsyncClient, user_data: Dict[str, Any]) -> Dict[str, str]:
+async def create_authenticated_client(
+    client: AsyncClient, user_data: Dict[str, Any]
+) -> Dict[str, str]:
     """Создает заголовки для аутентифицированного клиента."""
     return {"Authorization": "Bearer fake_token"}
 
@@ -68,8 +77,89 @@ def create_mock_user_data(user_id: int = 1) -> UserSchema:
         last_login=None,
         registration_source=None,
         created_at=datetime(2023, 1, 1),
-        updated_at=datetime(2023, 1, 1)
+        updated_at=datetime(2023, 1, 1),
     )
+
+
+def create_mock_data(
+    schema_class: Type[T], custom_values: Dict[str, Any] = None, id_value: int = 1
+) -> T:
+    """
+    Создает мок-данные для тестов для любой схемы.
+
+    Args:
+        schema_class: Класс схемы для которой нужно создать мок-данные
+        custom_values: Словарь с кастомными значениями полей {имя_поля: значение}
+        id_value: Значение для генерации ID (если поле id присутствует)
+
+    Returns:
+        Экземпляр схемы с заполненными мок-данными
+    """
+    custom_values = custom_values or {}
+    type_hints = get_type_hints(schema_class)
+    field_values = {}
+
+    try:
+        empty_instance = schema_class.__new__(schema_class)
+        for field_name in dir(empty_instance):
+            if not field_name.startswith("_") and not callable(
+                getattr(empty_instance, field_name, None)
+            ):
+                field_values[field_name] = None
+    except Exception:
+        field_values = {field: None for field in type_hints}
+
+    for field_name, field_type in type_hints.items():
+        if field_name in custom_values:
+            continue
+
+        if field_name == "id":
+            if "UUID" in str(field_type):
+                field_values[field_name] = uuid.UUID(int=id_value, version=None)
+            else:
+                field_values[field_name] = id_value
+        elif "str" in str(field_type):
+            field_values[field_name] = f"{field_name}_{id_value}"
+        elif "int" in str(field_type) and "Optional" not in str(field_type):
+            field_values[field_name] = 0
+        elif "float" in str(field_type) and "Optional" not in str(field_type):
+            field_values[field_name] = 0.0
+        elif "Decimal" in str(field_type) and "Optional" not in str(field_type):
+            field_values[field_name] = decimal.Decimal("0.00")
+        elif "bool" in str(field_type):
+            field_values[field_name] = False
+        elif "datetime" in str(field_type) and "created_at" in field_name:
+            field_values[field_name] = datetime(2025, 1, 1)
+        elif "datetime" in str(field_type) and "updated_at" in field_name:
+            field_values[field_name] = datetime(2025, 1, 1)
+        elif "Enum" in str(field_type) or any(
+            issubclass(field_type, Enum)
+            for b in getattr(field_type, "__bases__", [])
+            if hasattr(b, "__bases__")
+        ):
+            try:
+                enum_values = list(field_type.__members__.values())
+                if enum_values:
+                    field_values[field_name] = enum_values[0]
+            except (AttributeError, TypeError):
+                pass
+        elif "List" in str(field_type) or "list" in str(field_type):
+            field_values[field_name] = []
+        elif "Dict" in str(field_type) or "dict" in str(field_type):
+            field_values[field_name] = {}
+
+    field_values.update(custom_values)
+
+    try:
+        instance = schema_class(**field_values)
+    except TypeError as e:
+        missing_fields = str(e)
+        raise ValueError(
+            f"Не удалось создать мок-данные для {schema_class.__name__}. "
+            f"Возможно, не все обязательные поля были заполнены: {missing_fields}. "
+            f"Используйте custom_values для указания значений этих полей."
+        )
+    return instance
 
 
 def generate_test_uuid(seed: int = None) -> uuid.UUID:
@@ -128,7 +218,7 @@ def create_mock_user_dict(user_id: int = 1) -> Dict[str, Any]:
         "last_login": None,
         "registration_source": None,
         "created_at": datetime(2023, 1, 1).isoformat(),
-        "updated_at": datetime(2023, 1, 1).isoformat()
+        "updated_at": datetime(2023, 1, 1).isoformat(),
     }
 
 
@@ -140,8 +230,8 @@ def create_test_user_with_uuid(**overrides) -> Dict[str, Any]:
     """
     user_data = create_test_user_data()
 
-    if 'id' not in overrides:
-        overrides['id'] = str(uuid.uuid4())
+    if "id" not in overrides:
+        overrides["id"] = str(uuid.uuid4())
 
     user_data.update(overrides)
     return user_data

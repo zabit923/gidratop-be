@@ -12,6 +12,7 @@ from app.models.v1.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.v1.addresses import UserAddress
+    from app.models.v1.carts import Cart
     from app.models.v1.payments import PaymentMethod
 
 
@@ -134,7 +135,7 @@ class UserModel(BaseModel):
     payment_methods: Mapped[list["PaymentMethod"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    # cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
+    cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
     # orders: Mapped[list["Order"]] = relationship(back_populates="user")
     # reviews: Mapped[list["ProductReview"]] = relationship(back_populates="user")
     # wishlist: Mapped[list["WishlistItem"]] = relationship(back_populates="user")
