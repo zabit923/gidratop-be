@@ -165,14 +165,13 @@ class ProductService(BaseService):
         return ProductResponseSchema.model_validate(updated_product)
 
     async def get_best_sellers(
-        self, pagination: PaginationParams, limit: int = 10
+        self, pagination: PaginationParams
     ) -> Tuple[List[ProductResponseSchema], int]:
         """
         Получает список самых продаваемых продуктов (хиты продаж).
 
         Args:
             pagination: Параметры пагинации.
-            limit: Максимальное количество продуктов (по умолчанию 10).
 
         Returns:
             Кортеж (список продуктов, общее количество).
@@ -191,7 +190,6 @@ class ProductService(BaseService):
         Args:
             pagination: Параметры пагинации.
             min_discount: Минимальный размер скидки для включения в список (по умолчанию 10%).
-            limit: Максимальное количество продуктов (по умолчанию 10).
 
         Returns:
             Кортеж (список продуктов, общее количество).
