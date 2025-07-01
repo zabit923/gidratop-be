@@ -1086,7 +1086,7 @@ def test(
 #     password = db_config.get('POSTGRES_PASSWORD', '')
 #     host = db_config.get('POSTGRES_HOST', 'localhost')
 #     port = db_config.get('POSTGRES_PORT', '5432')
-#     db_name = db_config.get('POSTGRES_DB', 'gidrator_db')
+#     db_name = db_config.get('POSTGRES_DB', 'gidrator-db')
 #     test_db_name = f"{db_name}_test"
 
 #     try:
@@ -1169,7 +1169,7 @@ async def create_test_database_async():
     password = db_config.get("POSTGRES_PASSWORD", "")
     host = db_config.get("POSTGRES_HOST", "localhost")
     port = int(db_config.get("POSTGRES_PORT", "5432"))
-    db_name = db_config.get("POSTGRES_DB", "gidrator_db")
+    db_name = db_config.get("POSTGRES_DB", "gidrator-db")
     test_db_name = f"{db_name}_test"
 
     print(f"🔍 Подключение к {host}:{port} как {user}")
