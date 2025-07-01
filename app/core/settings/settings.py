@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     DESCRIPTION: str = ""
     VERSION: str = "0.1.0"
     HOST: str = "0.0.0.0"
-    PORT: int = Field(default=8000, env="UVICORN_PORT")
+    PORT: int = 8000
 
     @property
     def app_params(self) -> dict:

@@ -20,8 +20,7 @@ RUN apk add --no-cache poppler-utils || echo "poppler-utils failed"
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-ARG UVICORN_PORT=8000
-EXPOSE ${UVICORN_PORT}
+EXPOSE 8000
 
 COPY . /usr/src/app/
 
