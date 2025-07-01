@@ -150,7 +150,7 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5433
-POSTGRES_DB=gidrator_db
+POSTGRES_DB=gidrator-db
 
 # Настройки pgAdmin
 PGADMIN_DEFAULT_EMAIL=admin@admin.com
