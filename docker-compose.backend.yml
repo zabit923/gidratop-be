@@ -6,13 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        PORT: ${UVICORN_PORT:-8000}
+        PORT: ${UVICORN_PORT:-8006}
     env_file:
       - ./.env
     environment:
       - LOG_FILE=/var/log/app.log
     ports:
-      - "${UVICORN_PORT:-8000}:${UVICORN_PORT:-8000}"
+      - "${UVICORN_PORT:-8006}:${UVICORN_PORT:-8006}"
     restart: unless-stopped
     volumes:
       - /etc/timezone:/etc/timezone:ro
