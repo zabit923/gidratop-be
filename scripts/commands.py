@@ -83,7 +83,7 @@ ROOT_DIR = Path(__file__).parents[1]
 COMPOSE_FILE_WITHOUT_BACKEND = "docker-compose.dev.yml"
 
 DEFAULT_PORTS = {
-    "FASTAPI": 8000,
+    "FASTAPI": int(os.getenv("UVICORN_PORT", 8000)),
     "RABBITMQ": 5672,  # Порт для AMQP
     "RABBITMQ_UI": 15672,  # Порт для веб-интерфейса
     "POSTGRES": 5432,

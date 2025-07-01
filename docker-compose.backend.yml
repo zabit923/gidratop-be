@@ -5,12 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        PORT: ${UVICORN_PORT:-8000}
     env_file:
       - ./.env
     environment:
       - LOG_FILE=/var/log/app.log
     ports:
-      - "${UVICORN_PORT:-8000}:8000"
+      - "${UVICORN_PORT:-8000}:${UVICORN_PORT:-8000}"
     restart: unless-stopped
     volumes:
       - /etc/timezone:/etc/timezone:ro

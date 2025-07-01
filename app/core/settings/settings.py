@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, List
 
-from pydantic import AmqpDsn, PostgresDsn, RedisDsn, SecretStr
+from pydantic import AmqpDsn, Field, PostgresDsn, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     DESCRIPTION: str = ""
     VERSION: str = "0.1.0"
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = Field(default=8000, env="UVICORN_PORT")
 
     @property
     def app_params(self) -> dict:
