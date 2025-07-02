@@ -1,9 +1,25 @@
+from typing import Optional
+
 from app.schemas import BaseRequestSchema
 
 
 class CardCreateSchema(BaseRequestSchema):
-    pass
+    """
+    Схема запроса для создания карточки.
+
+    Attributes:
+        title: Название карточки.
+    """
+
+    title: str
 
 
 class CardUpdateSchema(BaseRequestSchema):
-    pass
+    """
+    Схема запроса для обновления карточки.
+
+    Attributes:
+        title: Название карточки.
+    """
+
+    title: Optional[str]

@@ -1,5 +1,6 @@
 from app.routes.base import BaseRouter
 from app.routes.v1.auth import AuthRouter
+from app.routes.v1.cards import CardRouter
 from app.routes.v1.carts import CartRouter
 from app.routes.v1.categories import CategoryRouter
 from app.routes.v1.products import ProductRouter
@@ -19,3 +20,4 @@ class APIv1(BaseRouter):
         self.router.include_router(CategoryRouter().get_router())
         self.router.include_router(ProductRouter().get_router())
         self.router.include_router(CartRouter().get_router())
+        self.router.include_router(CardRouter().get_router())
