@@ -30,7 +30,7 @@ class CardDataManager(BaseEntityManager[CardDataSchema]):
     """
 
     def __init__(self, session):
-        super().__init__(session=session, schema=CardDataSchema, model=None)
+        super().__init__(session=session, schema=CardDataSchema, model=Card)
 
     async def add_card(self, data: CardCreateSchema) -> Card:
         card_model = self.model(**data.model_dump())
@@ -54,5 +54,5 @@ class CardDataManager(BaseEntityManager[CardDataSchema]):
             )
 
     async def get_all_cards(self, pagination=PaginationParams):
-        statement = self.get_all(select(Card))
+        statement = select(Card)
         return await self.get_paginated_items(statement, pagination)

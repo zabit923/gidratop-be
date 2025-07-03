@@ -1,3 +1,5 @@
+from typing import Optional
+
 from app.schemas import BaseResponseSchema, BaseSchema
 from app.schemas.v1.pagination import Page
 
@@ -9,11 +11,11 @@ class CardResponseSchema(BaseSchema):
     Attributes:
         id (int): Уникальный идентификатор карточки
         title (str): Название карточки
-        image (str): URL изображения карточки
+        image Optional(str): URL изображения карточки
     """
 
     title: str
-    image: str
+    image: Optional[str] = None
 
 
 class CardListResponseSchema(BaseResponseSchema):
