@@ -4,6 +4,7 @@ from typing import List, Optional
 from sqlalchemy import or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import Product
 from app.schemas import PaginationParams, ProductCreateSchema, ProductDataSchema
@@ -33,25 +34,28 @@ class ProductDataManager(BaseEntityManager[ProductDataSchema]):
         pagination: PaginationParams,
         search: str = None,
         category_id: Optional[int] = None,
+        brand_id: Optional[int] = None,
     ) -> tuple[list[Product], int]:
-        statement = select(Product)
+        statement = select(Product).options(
+            selectinload(Product.category), selectinload(Product.brand)
+        )
         if search:
             statement = statement.filter(
                 or_(
                     self.model.title.ilike(f"%{search}%"),
-                    self.model.brand.ilike(f"%{search}%"),
                     self.model.material.ilike(f"%{search}%"),
                 )
             )
         if category_id is not None:
             statement = statement.filter(self.model.category_id == category_id)
+        if brand_id is not None:
+            statement = statement.filter(self.model.brand_id == brand_id)
         return await self.get_paginated_items(statement, pagination)
 
     async def add_product(self, data: ProductCreateSchema) -> Product:
         product_model = Product(
             title=data.title,
             description=data.description,
-            brand=data.brand,
             country=data.country,
             width=data.width,
             height=data.height,
@@ -59,6 +63,7 @@ class ProductDataManager(BaseEntityManager[ProductDataSchema]):
             price=data.price,
             quantity=data.quantity,
             category_id=data.category_id,
+            brand_id=data.brand_id,
         )
         return await self.add_one(product_model)
 

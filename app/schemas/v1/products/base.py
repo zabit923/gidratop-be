@@ -3,6 +3,8 @@ from typing import Optional
 from pydantic import Field
 
 from app.schemas.v1.base import BaseSchema
+from app.schemas.v1.brands import BrandResponseSchema
+from app.schemas.v1.categories import CategoryShortResponseSchema
 
 
 class ProductDataSchema(BaseSchema):
@@ -14,7 +16,6 @@ class ProductDataSchema(BaseSchema):
         title: Название продукта.
         description: Описание продукта.
         price: Цена продукта.
-        brand: Бренд продукта.
         country: Страна производства продукта.
         width: Ширина продукта в сантиметрах.
         height: Высота продукта в сантиметрах.
@@ -23,7 +24,6 @@ class ProductDataSchema(BaseSchema):
         sales_count: Количество проданных товаров.
         discount: Скидка на товар в процентах.
         new_arrivals: Является ли товар новинкой.
-        images: Список URL изображений продукта.
     """
 
     title: str = Field(
@@ -39,11 +39,6 @@ class ProductDataSchema(BaseSchema):
         ],
     )
     price: float = Field(description="Цена продукта", examples=[999.99, 499.99, 19.99])
-    brand: Optional[str] = Field(
-        default=None,
-        description="Бренд продукта",
-        examples=["Apple", "Samsung", "Sony"],
-    )
     country: Optional[str] = Field(
         default=None,
         description="Страна производства продукта",
@@ -82,3 +77,8 @@ class ProductDataSchema(BaseSchema):
         description="Является ли товар новинкой",
         examples=[True, False],
     )
+    category: Optional["CategoryShortResponseSchema"] = None
+    brand: Optional["BrandResponseSchema"] = None
+
+
+ProductDataSchema.model_rebuild()

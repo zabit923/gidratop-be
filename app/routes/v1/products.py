@@ -54,6 +54,9 @@ class ProductRouter(BaseRouter):
             category_id: Optional[int] = Query(
                 None, description="ID категории для фильтрации"
             ),
+            brand_id: Optional[int] = Query(
+                None, description="ID бренда для фильтрации"
+            ),
             session: AsyncSession = Depends(get_db_session),
         ) -> ProductListResponseSchema:
             """
@@ -68,6 +71,7 @@ class ProductRouter(BaseRouter):
                 pagination=pagination,
                 search=search,
                 category_id=category_id,
+                brand_id=brand_id,
             )
             page = Page(
                 items=products,

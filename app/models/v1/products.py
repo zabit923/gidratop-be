@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models import BaseModel
 
 if TYPE_CHECKING:
+    from app.models.v1.brands import Brand
     from app.models.v1.carts import CartItem
     from app.models.v1.categories import Category
 
@@ -39,7 +40,9 @@ class Product(BaseModel):
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
-    brand: Mapped[Optional[str]] = mapped_column(nullable=True)
+    brand_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("brands.id", ondelete="SET NULL"), nullable=True
+    )
     country: Mapped[Optional[str]] = mapped_column(nullable=True)
     width: Mapped[Optional[float]] = mapped_column(
         Numeric(8, 2), nullable=True, doc="Ширина, см"
@@ -64,6 +67,9 @@ class Product(BaseModel):
 
     category: Mapped[Optional["Category"]] = relationship(
         "Category", back_populates="products", lazy="selectin"
+    )
+    brand: Mapped[Optional["Brand"]] = relationship(
+        "Brand", back_populates="products", lazy="selectin"
     )
     items: Mapped[Optional["CartItem"]] = relationship(
         "CartItem", back_populates="product"
