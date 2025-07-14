@@ -13,7 +13,7 @@
 - Логирование процесса настройки
 """
 import logging
-from typing import List
+
 from fastapi import FastAPI
 
 from .broker import rabbit_router
@@ -54,7 +54,7 @@ async def setup_queues(app: FastAPI) -> None:
     logger.info("Настройка очередей RabbitMQ для отправки email")
 
     # Объявляем все необходимые очереди
-    queues: List[str] = [
+    queues = [
         "email_queue",
         "verification_email_queue",
         "password_reset_email_queue",
