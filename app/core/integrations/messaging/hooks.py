@@ -15,7 +15,7 @@
 import logging
 
 from fastapi import FastAPI
-
+from faststream.broker.queue import Queue
 from .broker import rabbit_router
 
 logger = logging.getLogger("app.faststream.hooks")
@@ -55,21 +55,20 @@ async def setup_queues(app: FastAPI) -> None:
 
     # Объявляем все необходимые очереди
     queues = [
-        "email_queue",
-        "verification_email_queue",
-        "password_reset_email_queue",
-        "registration_success_email_queue",
+        Queue(name="email_queue"),
+        Queue(name="verification_email_queue"),
+        Queue(name="password_reset_email_queue"),
+        Queue(name="registration_success_email_queue"),
     ]
 
-    # Создаем каждую очередь
-    for queue_name in queues:
+   # Создаем каждую очередь
+    for queue in queues:
         try:
             # Объявляем очередь через broker
-            # FastStream автоматически создаст очередь, если она не существует
-            await rabbit_router.broker.declare_queue(queue_name)
-            logger.info("Очередь %s успешно создана/проверена", queue_name)
+            await rabbit_router.broker.declare_queue(queue)
+            logger.info("Очередь %s успешно создана/проверена", queue.name)
         except Exception as e:
             # Логируем ошибку, но не прерываем запуск приложения
-            logger.error("Ошибка при создании очереди %s: %s", queue_name, str(e))
-
+            logger.error("Ошибка при создании очереди %s: %s", queue.name, str(e)) # Создаем каждую очередь
+    
     logger.info("Настройка очередей завершена")
