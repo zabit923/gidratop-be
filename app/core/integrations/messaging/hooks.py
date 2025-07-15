@@ -15,25 +15,19 @@
 import logging
 
 from fastapi import FastAPI
-from faststream.rabbit import RabbitQueue
+
 from .broker import rabbit_router
 
 logger = logging.getLogger("app.faststream.hooks")
 
 
 @rabbit_router.after_startup
-async def setup_queues(app: FastAPI) -> None:
+async def log_system_ready(app: FastAPI) -> None:
     """
-    Создает необходимые очереди в RabbitMQ после запуска приложения.
+    Логирует готовность системы сообщений после запуска приложения.
 
     Этот хук выполняется после успешного подключения к RabbitMQ
-    и создает все необходимые очереди для работы системы email.
-
-    Создаваемые очереди:
-    - email_queue: Для обычных email сообщений
-    - verification_email_queue: Для писем верификации
-    - password_reset_email_queue: Для писем сброса пароля
-    - registration_success_email_queue: Для писем об успешной регистрации
+    и автоматического создания очередей через FastStream consumers.
 
     Args:
         app (FastAPI): Экземпляр FastAPI приложения
@@ -41,40 +35,10 @@ async def setup_queues(app: FastAPI) -> None:
     Returns:
         None
 
-    Raises:
-        Exception: Логируется, но не пробрасывается для предотвращения
-                  сбоя запуска приложения
-
     Note:
-        Все очереди создаются с настройками по умолчанию:
-        - Durable: True (переживают перезапуск RabbitMQ)
-        - Auto-delete: False (не удаляются автоматически)
-        - Exclusive: False (доступны для множественных подключений)
+        FastStream автоматически создает очереди при регистрации
+        @rabbit_router.subscriber декораторов, поэтому ручное
+        создание не требуется.
     """
-    logger.info("Настройка очередей RabbitMQ для отправки email")
-
-    # Объявляем все необходимые очереди
-    queues = [
-        "email_queue",
-        "verification_email_queue",
-        "password_reset_email_queue",
-        "registration_success_email_queue",
-    ]
-
-    for queue_name in queues:
-        try:
-            # Создаем объект очереди с настройками
-            queue = RabbitQueue(
-                name=queue_name,
-                durable=True,
-                auto_delete=False,
-                exclusive=False
-            )
-            # Объявляем очередь через брокер
-            await rabbit_router.broker.declare_queue(queue)
-            logger.info("✅ Очередь %s успешно создана/проверена", queue_name)
-
-        except Exception as e:
-            logger.error("Ошибка при создании очереди %s: %s", queue_name, str(e))
-
-    logger.info("Настройка очередей завершена")
+    logger.info("🚀 Система сообщений FastStream готова к работе")
+    logger.info("📨 Все consumers активны и ожидают сообщения")
