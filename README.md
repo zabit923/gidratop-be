@@ -1,93 +1,299 @@
-# gidrator-be
+# Gidrator
 
+## 🛠️ Технологический стек
 
+#### Управление зависимостями
+[![uv](https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=python&logoColor=white)](https://docs.astral.sh/uv/)
 
-## Getting started
+#### Backend
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Uvicorn](https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=gunicorn&logoColor=white)](https://www.uvicorn.org/)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+#### База данных
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/docs/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/docs/)
+[![Alembic](https://img.shields.io/badge/Alembic-6BA81E?style=for-the-badge&logo=sqlalchemy&logoColor=white)](https://alembic.sqlalchemy.org/)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+#### Очереди и сообщения, стриминг
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/docs)
+[![FastStream](https://img.shields.io/badge/FastStream-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://faststream.airt.ai/)
 
-## Add your files
+#### Инфраструктура
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/)
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+#### Инструменты разработки
+[![pgAdmin](https://img.shields.io/badge/pgAdmin-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.pgadmin.org/docs/)
+[![Redis Commander](https://img.shields.io/badge/Redis_Commander-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://github.com/joeferner/redis-commander)
 
+#### Облачные сервисы
+[![Yandex Cloud](https://img.shields.io/badge/Yandex_Cloud-5282FF?style=for-the-badge&logo=yandex&logoColor=white)](https://yandex.cloud/docs/)
+[![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white)](https://docs.aws.amazon.com/s3/)
+
+#### Безопасность и аутентификация
+[![Argon2](https://img.shields.io/badge/Argon2-000000?style=for-the-badge&logo=security&logoColor=white)](https://argon2-cffi.readthedocs.io/)
+[![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://pyjwt.readthedocs.io/)
+
+#### Качество кода
+[![Black](https://img.shields.io/badge/Black-000000?style=for-the-badge&logo=python&logoColor=white)](https://black.readthedocs.io/)
+[![MyPy](https://img.shields.io/badge/MyPy-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://mypy.readthedocs.io/)
+[![Flake8](https://img.shields.io/badge/Flake8-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://flake8.pycqa.org/)
+[![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org/)
+
+## Установка
+
+Клонируйте репозиторий в директорию, в которой находитесь:
+```bash
+git clone https://gitlab.com/store-be/gidrator-be.git .
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/store-be/gidrator-be.git
-git branch -M main
-git push -uf origin main
+Или:
+```bash
+git clone https://gitlab.com/store-be/gidrator-be.git
+```
+Перейдите в директорию с проектом:
+```bash
+cd ./gidrator-be
 ```
 
-## Integrate with your tools
+> [!NOTE]
+> Перед тем, как запускать проект, проверьте наличие файла `.env`
 
-- [ ] [Set up project integrations](https://gitlab.com/store-be/gidrator-be/-/settings/integrations)
+## Настройка окружения
 
-## Collaborate with your team
+Перед запуском проекта необходимо настроить переменные окружения.
+В проекте используется файл `.env.dev` для разработки.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+Скопируйте пример конфигурации из .env.example в новый файл .env.dev:
+```bash
+cp .env.example .env.dev
+```
 
-## Test and Deploy
+Отредактируйте файл .env.dev, заполнив следующие обязательные параметры:
 
-Use the built-in continuous integration in GitLab.
+### Настройки JWT и безопасности
+- `TOKEN_SECRET_KEY` - секретный ключ для подписи JWT токенов (обязательно!)
+- `COOKIE_DOMAIN` - домен для cookies (localhost для разработки)
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Настройки базы данных PostgreSQL
+- `POSTGRES_USER` - имя пользователя PostgreSQL
+- `POSTGRES_PASSWORD` - пароль пользователя PostgreSQL
+- `POSTGRES_HOST` - хост базы данных (обычно localhost для разработки)
+- `POSTGRES_PORT` - порт PostgreSQL (по умолчанию 5432)
+- `POSTGRES_DB` - имя базы данных
 
-***
+### Настройки pgAdmin
+- `PGADMIN_DEFAULT_EMAIL` - email пользователя pgAdmin
+- `PGADMIN_DEFAULT_PASSWORD` - пароль пользователя pgAdmin
 
-# Editing this README
+### Настройки Redis
+- `REDIS_PASSWORD` - пароль для Redis
+- `REDIS_PORT` - порт Redis (по умолчанию 6379)
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Настройки RabbitMQ
+- `RABBITMQ_USER` - имя пользователя RabbitMQ
+- `RABBITMQ_PASS` - пароль пользователя RabbitMQ
+- `RABBITMQ_HOST` - хост RabbitMQ
+- `RABBITMQ_PORT` - порт RabbitMQ (по умолчанию 5672)
+- `RABBITMQ_EXCHANGE` - имя exchange для сообщений
 
-## Suggestions for a good README
+### Настройки SMTP (для отправки email)
+- `SMTP_USERNAME` - имя пользователя SMTP
+- `SMTP_PASSWORD` - пароль SMTP
+- `SMTP_PORT` - порт SMTP (по умолчанию 587)
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Настройки AWS S3
+- `AWS_SERVICE_NAME` - имя сервиса AWS (s3)
+- `AWS_REGION` - регион AWS (ru-central1)
+- `AWS_ENDPOINT` - endpoint AWS (https://storage.yandexcloud.net)
+- `AWS_BUCKET_NAME` - имя бакета AWS
+- `AWS_ACCESS_KEY_ID` - ключ доступа AWS
+- `AWS_SECRET_ACCESS_KEY` - секретный ключ доступа AWS
 
-## Name
-Choose a self-explaining name for your project.
+### Настройки CORS
+- `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["*"])
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### Настройки логирования
+- `LOGGING__LOG_FORMAT` - формат логов (pretty/json)
+- `LOGGING__LOG_FILE` - путь к файлу логов
+- `LOGGING__LEVEL` - уровень логирования (DEBUG/INFO/WARNING/ERROR)
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+> [!NOTE]
+> Порт 5432 может быть занят, поэтому его можно изменить на любой другой свободный порт (например, 5433).
+>
+>
+### Настройки CORS
+- `ALLOW_ORIGINS` - список разрешенных источников (для разработки обычно ["http://localhost:3000","http://localhost:5173"])
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Пример минимальной конфигурации для локальной разработки
+```
+# Настройки логирования
+LOGGING__LOG_FORMAT=pretty
+LOGGING__LOG_FILE=./logs/app.log
+LOGGING__LEVEL=DEBUG
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+# Настройки JWT (ОБЯЗАТЕЛЬНО!)
+TOKEN_SECRET_KEY=your_very_secure_secret_key_here
+COOKIE_DOMAIN=localhost
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+# SMTP
+SMTP_PORT=587
+SMTP_USERNAME=admin
+SMTP_PASSWORD=admin
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+# Настройки Redis
+REDIS_PORT=6379
+REDIS_PASSWORD=default
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+# Настройки базы данных
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+POSTGRES_DB=gidrator-db
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+# Настройки pgAdmin
+PGADMIN_DEFAULT_EMAIL=admin@admin.com
+PGADMIN_DEFAULT_PASSWORD=admin
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+# RabbitMQ
+RABBITMQ_USER=guest
+RABBITMQ_PASS=guest
+RABBITMQ_PORT=5672
+RABBITMQ_HOST=localhost
+RABBITMQ_EXCHANGE=gidrator
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# AWS S3
+AWS_SERVICE_NAME=s3
+AWS_REGION=ru-central1
+AWS_ENDPOINT=https://storage.yandexcloud.net
+AWS_BUCKET_NAME=your_bucket_name
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+# Настройки CORS
+ALLOW_ORIGINS=["*"]
+ALLOW_CREDENTIALS=true
+ALLOW_METHODS=["*"]
+ALLOW_HEADERS=["*"]
+```
 
-## License
-For open source projects, say how it is licensed.
+> [!IMPORTANT]
+> - Никогда не коммитьте файлы .env.dev или другие файлы с реальными учетными данными в репозиторий!
+> - Убедитесь, что они добавлены в .gitignore.
+> - Обязательно замените `TOKEN_SECRET_KEY` на уникальный секретный ключ!
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Первый запуск
+> [!IMPORTANT]
+> Перед использованием этих команд uv должен быть установлен
+```bash
+uv run activate
+```
+
+## Последующий запуск
+
+Для активации виртуального окружения без запуска режима разработки
+(например, нужно сделать миграции в соседнем терминале при запущенной инфраструктуре):
+
+```bash
+uv run setup
+```
+
+Запуск в режиме разработки (с hot-reload) без инфраструктуры (базы данных и т.д.)
+```bash
+uv run dev
+```
+
+Или запуск в режиме разработки (с hot-reload) с инфраструктурой одной командой:
+
+```bash
+uv run activate
+```
+
+## Разработка
+
+### Процесс разработки такой:
+- Разработка идёт от `development`
+- В `development` мерджим фичи
+- Тестим на `development`
+- Когда всё ок - мерджим `development` в `main`
+
+Если вы хотите внести изменения или улучшения, пожалуйста, следуйте этим шагам:
+
+1. Переключаемся на `development` и подтягиваем последние изменения с удалённого репозитория:
+```bash
+git checkout development
+git pull origin development
+```
+
+2. От `development` создаем свою ветку разработки и сразу на неё переключаемся:
+```bash
+git checkout -b feature/your-name-of-feature
+```
+
+3. Кодим и по итогу добавляем все изменения в индекс:
+```bash
+git add .
+```
+
+4. Создаём коммит с описанием изменений
+```bash
+git commit -m "feat: your-changes"
+```
+
+5. Перед пушем обновляем ветку от `development`, то есть
+ 1) Переключаемся обратно на development
+ 2) Подтягиваем новые изменения
+ 3) Возвращаемся на свою ветку
+ 4) Переносим свои изменения поверх последней версии `development`
+
+```bash
+git checkout development
+git pull origin development
+git checkout feature/your-name-of-feature
+git rebase development
+```
+
+6. Отправляем свою ветку в удалённый репозиторий:
+```bash
+git push origin feature/your-name-of-feature --force-with-lease
+```
+
+7. Создаем Pull Request в dev ветку!
+> 1) Жмём кнопку "New Pull Request"
+> 2) В base выбираем `development` (КУДА льём)
+> 3) В compare выбираем свою ветку feature/your-name-of-feature (ОТКУДА льём)
+> 4) Пишешь нормальное описание что сделали
+> 5) Добавляем ревьюеров
+> 6) Создаёи PR
+
+Либо просто делаем merge в development ветку из своей feature/your-name-of-feature ветки.
+```bash
+git checkout development
+git merge feature/your-name-of-feature
+```
+
+8. После тестирования на `development`, создаём PR из `development` в `main`.
+> 1) Создаём новый PR
+> 2) В base выбираем main (КУДА льём)
+> 3) В compare выбираем development (ОТКУДА льём)
+> 4) Описываем все изменения которые войдут в прод
+> 6) Ждём подтверждения от тимлида
+
+Либо просто делаем merge в main ветку из development ветки.
+```bash
+git checkout main
+git merge development
+```
+
+9. Удаляем свою ветку feature/your-name-of-feature
+
+Локально:
+
+```bash
+git branch -d feature/your-name-of-feature
+```
+Удалённо:
+```bash
+git push origin --delete feature/your-name-of-feature
+```
