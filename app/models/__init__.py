@@ -6,6 +6,7 @@
 
 from app.models.v1.addresses import UserAddress
 from app.models.v1.base import BaseModel
+from app.models.v1.cards import Card
 from app.models.v1.carts import Cart, CartItem
 from app.models.v1.categories import Category
 from app.models.v1.payments import PaymentMethod
@@ -22,4 +23,5 @@ __all__ = [
     "Cart",
     "CartItem",
     "Category",
+    "Card",
 ]

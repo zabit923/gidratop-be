@@ -11,6 +11,7 @@ from .auth import (
     WeakPasswordError,
 )
 from .base import BaseAPIException
+from .cards import CardAlreadyExistsError, CardNotFoundError
 from .cart_items import CartItemNotFoundError, OutOfStockError
 from .categories import CategoryAlreadyExistsError, CategoryNotFoundError
 from .common import InvalidFileTypeError, StorageError
@@ -44,4 +45,6 @@ __all__ = [
     "RateLimitExceededError",
     "OutOfStockError",
     "CartItemNotFoundError",
+    "CardAlreadyExistsError",
+    "CardNotFoundError",
 ]
