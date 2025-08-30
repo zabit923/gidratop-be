@@ -13,7 +13,6 @@ class ProductCreateSchema(BaseRequestSchema):
     Attributes:
         title: Название продукта.
         description: Описание продукта (необязательное).
-        brand: Бренд продукта (необязательное).
         country: Страна производств�� продукта (необязательное).
         width: Ширина продукта в сантиметрах (необязательное).
         height: Высота продукта в сантиметрах (необязательное).
@@ -21,6 +20,7 @@ class ProductCreateSchema(BaseRequestSchema):
         price: Цена продукта.
         quantity: Количество на складе.
         category_id: ID категории, к которой принадлежит продукт (необязательное).
+        brand_id: ID бренда, к которому принадлежит продукт (необязательное).
     """
 
     title: str = Field(
@@ -61,6 +61,7 @@ class ProductCreateSchema(BaseRequestSchema):
     category_id: Optional[int] = Field(
         default=None, description="ID категории продукта"
     )
+    brand_id: Optional[int] = Field(default=None, description="ID бренда продукта")
 
 
 class ProductUpdateSchema(ProductCreateSchema):
@@ -110,3 +111,4 @@ class ProductUpdateSchema(ProductCreateSchema):
     category_id: Optional[int] = Field(
         default=None, description="ID категории продукта"
     )
+    brand_id: Optional[int] = Field(default=None, description="ID бренда продукта")

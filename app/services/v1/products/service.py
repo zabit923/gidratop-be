@@ -51,9 +51,10 @@ class ProductService(BaseService):
         pagination: PaginationParams,
         search: Optional[str] = None,
         category_id: Optional[int] = None,
+        brand_id: Optional[int] = None,
     ) -> Tuple[List[ProductResponseSchema], int]:
         products, total = await self.data_manager.get_all_products(
-            pagination, search, category_id
+            pagination, search, category_id, brand_id
         )
         return [
             ProductResponseSchema.model_validate(product) for product in products

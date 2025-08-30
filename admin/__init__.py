@@ -1,4 +1,5 @@
 from app.models import (
+    Brand,
     Cart,
     CartItem,
     Category,
@@ -10,6 +11,7 @@ from app.models import (
 
 from .config import admin
 from .views.addresses import UserAddressAdmin
+from .views.brands import BrandAdmin
 from .views.cart import CartAdmin
 from .views.cart_item import CartItemAdmin
 from .views.category import CategoryAdmin
@@ -24,3 +26,4 @@ admin.add_view(CategoryAdmin(Category, icon="fa-solid fa-list"))
 admin.add_view(PaymentMethodAdmin(PaymentMethod, icon="fa-solid fa-credit-card"))
 admin.add_view(CartAdmin(Cart, icon="fa-solid fa-cart-shopping"))
 admin.add_view(CartItemAdmin(CartItem, icon="fa-solid fa-cart-plus"))
+admin.add_view(BrandAdmin(Brand, icon="fa-solid fa-copyright"))

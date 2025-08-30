@@ -4,6 +4,8 @@
 Предоставляет интерфейс для отправки и обработки сообщений через брокер сообщений.
 """
 
+from .brands import BrandS3DataManager, get_brand_s3_manager
+
 # Импортируем API роутер для тестирования
 # from .api import email_test_router
 # # Импортируем и инициализируем брокер
@@ -23,4 +25,6 @@ __all__ = [
     "get_category_s3_manager",
     "ProductS3DataManager",
     "get_product_s3_manager",
+    "BrandS3DataManager",
+    "get_brand_s3_manager",
 ]
